@@ -1,4 +1,5 @@
 import os
+import sqlite3
 from output_utils import clear_console
 from Employee import Employee
 from Expense import Expense
@@ -7,8 +8,6 @@ from Approval import Approval
 
 
 def main():
-    global employees
-    employees = []
     global expenses
     expenses = []
     global approvals
@@ -21,7 +20,9 @@ def main():
     print("Please login")
     print("*" * 20)
 
-    logged_in_as = login(employees)
+    conn = sqlite3.connect("../database/expense_manager.db")
+    conn.row_factory = sqlite3.Row
+    logged_in_as = login(conn)
     clear_console()
 
 
@@ -42,22 +43,28 @@ def main():
 
         match user_selection:
             case 1:  
-                expense_manager()
+                expense_manager(conn)
                 clear_console()
             case 5:
+                conn.close()
                 break
             case _:
                 print("Not a valid menu item")
 
-def login(employees):
+def login(conn):
     while True:
         print("Please enter your username: ")
-        username = input()
-        if username not in employees:
+        username = input()  
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username = ?",(username,))
+
+        result = cursor.fetchone()
+
+        if result is None:
             print("User does not exist, Press 1 to create new employee, press 2 to try again")
             user_input = int(input())
             if user_input == 1:
-                new_employee = add_employee()
+                new_employee = add_employee(conn)
                 print("Logged in now!")
                 return new_employee
             else:
@@ -65,30 +72,33 @@ def login(employees):
 
         print("Please enter your password: ")
         input_password = input()
-        password = employees[username]
-        if input_password != password:
+        
+        # give max amount of tries
+        if input_password != result["password"]:
             print("Password is incorrect")
 
         print("Logged in now!")
-        for employee in employees:
-            if employee.username == username:
-                return employee
+        return result
         
-    
-            
-        
-def add_employee():
+def add_employee(conn):
     print("Enter username")
     username = input()
     print("Enter password")
     password = input()
     print("Enter 1 for Employee, Enter 2 for Manager")
-    role = int(input())
-    new_employee = Employee(username, password, role)
-    employees.append(new_employee)
-    return new_employee
+    role_input = int(input())
+    role = "Manager" if (role_input == 2) else "Employee"
 
-def expense_manager():
+    cursor = conn.cursor()
+    try:
+        user = cursor.execute("INSERT INTO users(username,password,role) VALUES(?,?,?)",(username,password,role))
+    except sqlite3.IntegrityError as e:
+        print("Username is taken!")
+        return add_employee()
+
+    return user
+
+def expense_manager(conn):
     while True:
         print("Expense Menu:")
         print("Enter 1 to add an expense: ")
@@ -96,20 +106,23 @@ def expense_manager():
         user_input = int(input())
         match user_input:
             case 1:
-                add_expense()
+                add_expense(conn)
             case 2: 
                 check_expense_status()
 
 
-def add_expense():
+def add_expense(conn):
+    cursor = conn.cursor()
     amount = float(input("Enter expense amount:"))
     description = input("Enter description: ")
     user_input = input("Enter a date (DD/MM/YYYY): ")    
-    date_object = datetime.strptime(user_input, "%d/%m/%Y") 
-    formatted_date = date_object.strftime("%B %d, %Y") 
-    new_expense = Expense(logged_in_as.id, amount, description, formatted_date)
-    expenses.append(new_expense)
-    print(f"Expense added: {new_expense}")
+    #date_object = datetime.strptime(user_input, "%d/%m/%Y") 
+    #formatted_date = date_object.strftime("%B %d, %Y")
+
+    cursor.execute("INSERT INTO expenses(employee_id,amount,description,date) VALUES(?,?,?,?)",(logged_in_as["id"],amount, description, user_input))
+    # new_expense = Expense(logged_in_as["id"], amount, description, formatted_date)
+    
+    #print(f"Expense added: {new_expense}")
 
 def check_expense_status():
     #add later once we complete java
