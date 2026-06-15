@@ -1,9 +1,11 @@
 # Adding Employee
 import os
 from output_utils import clear_console
+import sqlite3
+
+
 
 def main():
-    employees = []
     logged_in_as = ""
     print("*" * 20)
     print("Welcome to the Menu")
@@ -34,24 +36,27 @@ def main():
             case _:
                 print("Not a valid menu item")
 
-def login(employees):
+def login():
+    with sqlite3.connect("../database/expense_manager.db") as conn:
+        cursor = conn.cursor()
+        while True:
+            print("Please enter your username: ")
+            username = input()
+            cursor.execute("SELECT * FROM users WHERE = ?",(username,))
+            result = cursor.fetchone()
+            if result is None:
+                print("User does not exist")
+                continue
 
-    while True:
-        print("Please enter your username: ")
-        username = input()
-        if username not in employees:
-            print("User does not exist")
-            continue
+            print("Please enter your password: ")
+            input_password = input()
+            password = employees[username]
+            if input_password != password:
+                print("Password is incorrect")
 
-        print("Please enter your password: ")
-        input_password = input()
-        password = employees[username]
-        if input_password != password:
-            print("Password is incorrect")
-
-        print("Logged in now!")
-        return username
-        
+            print("Logged in now!")
+            return username
+            
 def add_employee(employee):
 
 def expenses():
