@@ -76,6 +76,8 @@ def login(conn):
         # give max amount of tries
         if input_password != result["password"]:
             print("Password is incorrect")
+            continue
+        
 
         print("Logged in now!")
         return result
@@ -92,9 +94,10 @@ def add_employee(conn):
     cursor = conn.cursor()
     try:
         user = cursor.execute("INSERT INTO users(username,password,role) VALUES(?,?,?)",(username,password,role))
+        conn.commit()
     except sqlite3.IntegrityError as e:
         print("Username is taken!")
-        return add_employee()
+        return add_employee(conn)
 
     return user
 
@@ -115,14 +118,18 @@ def add_expense(conn):
     cursor = conn.cursor()
     amount = float(input("Enter expense amount:"))
     description = input("Enter description: ")
-    user_input = input("Enter a date (DD/MM/YYYY): ")    
-    #date_object = datetime.strptime(user_input, "%d/%m/%Y") 
-    #formatted_date = date_object.strftime("%B %d, %Y")
+    user_input = input("Enter a date (DD/MM/YYYY): ")  
+  
+    try:
+        date_object = datetime.strptime(user_input, "%d/%m/%Y") 
+    except ValueError as e:
+        print("Not a valid date. Please try again!")
+        return None        
+    formatted_date = date_object.strftime("%B %d, %Y")
 
     cursor.execute("INSERT INTO expenses(employee_id,amount,description,date) VALUES(?,?,?,?)",(logged_in_as["id"],amount, description, user_input))
-    # new_expense = Expense(logged_in_as["id"], amount, description, formatted_date)
-    
-    #print(f"Expense added: {new_expense}")
+    conn.commit()
+    print(f"Expense added: ")
 
 def check_expense_status():
     #add later once we complete java
