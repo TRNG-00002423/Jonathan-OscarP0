@@ -126,8 +126,18 @@ def add_expense(conn):
         print("Not a valid date. Please try again!")
         return None        
     formatted_date = date_object.strftime("%B %d, %Y")
+    
+    cursor.execute(
+        "INSERT INTO expenses(user_id, amount, description, date) VALUES (?, ?, ?, ?)",
+        (logged_in_as["id"], amount, description, formatted_date)
+    )
 
-    cursor.execute("INSERT INTO expenses(employee_id,amount,description,date) VALUES(?,?,?,?)",(logged_in_as["id"],amount, description, user_input))
+    expense_id = cursor.lastrowid
+
+    cursor.execute(
+        "INSERT INTO approvals(expense_id, status) VALUES (?, ?)",
+        (expense_id, "pending")
+    )
     conn.commit()
     print(f"Expense added: ")
 
