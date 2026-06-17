@@ -15,11 +15,11 @@ CREATE TABLE users (
 cursor.execute("""
 CREATE TABLE expenses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
     amount REAL NOT NULL,
     description TEXT,
     date TEXT NOT NULL,
-    FOREIGN KEY (employee_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id)
 )
 """)
 
@@ -27,8 +27,11 @@ cursor.execute("""
 CREATE TABLE approvals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     expense_id INTEGER NOT NULL,
-    manager_id INTEGER NOT NULL,
+    manager_id INTEGER,
     status TEXT NOT NULL,
+    reviewer INTEGER,
+    comment TEXT,
+    review_date TEXT,
     FOREIGN KEY (expense_id) REFERENCES expenses(id),
     FOREIGN KEY (manager_id) REFERENCES users(id)
 )
