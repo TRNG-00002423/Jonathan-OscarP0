@@ -5,7 +5,8 @@ from Employee import Employee
 from Expense import Expense
 from datetime import datetime
 from Approval import Approval
-
+#adding this import, you may have to "pip install questionary"
+import questionary
 
 def main():
     global expenses
@@ -187,9 +188,10 @@ def view_pending_expenses(conn):
     
 
 def delete_expense(conn):
-    print("Here are your expenses")
-    view_pending_expenses(conn)
-    expense_id = int(input("Please enter the ID of the expense you would like to delete: "))
+    # print("Here are your expenses")
+    # view_pending_expenses(conn)
+    # expense_id = int(input("Please enter the ID of the expense you would like to delete: "))
+    expense_id =  choose_expense(conn)
     cursor =  conn.cursor()
     cursor.execute(
             "DELETE FROM approvals WHERE expense_id = ?",
@@ -204,8 +206,59 @@ def delete_expense(conn):
     print(f"Expense {expense_id} was deleted")
 
 
+
+def choose_expense(conn):
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
+                               approvals.expense_id = expenses.id WHERE expenses.user_id = ? AND approvals.status = ? """, 
+                               (logged_in_as["id"], "pending"))
+    
+    expenses = cursor.fetchall()
+
+    expense_options = [questionary.Choice(
+            title=f"{row['id']} | ${row['amount']} | {row['description']} | {row['category']} | {row['status']}", 
+            value=row['id']
+        )
+        for row in expenses
+    ]
+    selected_id = questionary.select(
+        "What expense would you like to select?",
+        choices=expense_options
+    ).ask()
+
+    return selected_id
+    
+    
+#TODO add validation
 def edit_expense(conn):
-    view_pending_expenses()
+    expense_id =  choose_expense(conn)
+    cursor =  conn.cursor()
+    cursor.execute("SELECT * FROM expenses WHERE expenses.id = ?", (expense_id,))
+    expense = cursor.fetchone()
+
+    while True:
+        updated_field = questionary.select(
+            "What would you like to edit?",
+            choices=["amount", "description", "category", "date", "QUIT"]
+        ).ask()
+
+        if updated_field == "QUIT":
+            break
+
+        new_value = questionary.text(
+            f"Enter new {updated_field}:",
+            default=str(expense[updated_field])
+        ).ask()
+
+        cursor.execute(
+            f"UPDATE expenses SET {updated_field} = ? WHERE id = ?",
+            (new_value, expense_id)
+        )
+
+        conn.commit()
+
+    print("Expense updated successfully.")
+
 
 
 
