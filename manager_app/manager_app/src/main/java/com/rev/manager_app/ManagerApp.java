@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Scanner;
 
 import com.rev.util.DatabaseConnectionUtil;
@@ -18,33 +19,41 @@ public class ManagerApp {
         User user = accessAccount(scanner, conn);
 
         System.out.println("Welcome to the Menu!");
-        System.out.println("\nPlease enter 1 to view pending expenses");
-        System.out.println("Please enter 2 to approve/deny an expense");
-        System.out.println("Please enter 3 to generate a report for an expense");
-        int input = scanner.nextInt();
+        
+        while(true){
+            System.out.println("\nPlease enter 1 to view pending expenses");
+            System.out.println("Please enter 2 to approve/deny an expense");
+            System.out.println("Please enter 3 to generate a report for an expense");
+            System.out.println("Please enter 4 to exit the app");
+            int input = scanner.nextInt();
 
-        switch (input){
-            case 1:
-                try {
-                    viewPendingExpenses(conn);
-                } catch (SQLException e) {
-                    System.out.println(e.getMessage());
-                }
-                break;
-            case 2:
-                try {
-                    reviewExpense(scanner, conn, user);
-                } catch (SQLException e) {
-                    System.out.println(e.getMessage());
-                }
-                break;
-            case 3:
-                try {
-                    viewPendingExpenses(conn);
-                } catch (SQLException e) {
-                    System.out.println(e.getMessage());
-                }
-                break;
+            switch (input){
+                case 1:
+                    try {
+                        viewPendingExpenses(conn);
+                    } catch (SQLException e) {
+                        System.out.println(e.getMessage());
+                    }
+                    break;
+                case 2:
+                    try {
+                        reviewExpense(scanner, conn, user);
+                    } catch (SQLException e) {
+                        System.out.println(e.getMessage());
+                    }
+                    break;
+                case 3:
+                    try {
+                        generateReport(scanner, conn);
+                    } catch (SQLException e) {
+                        System.out.println(e.getMessage());
+                    }
+                    break;
+                case 4:
+                    System.out.println("Goodbye!");
+                    scanner.close();
+                    return;
+            }
         }
 
     }
@@ -190,30 +199,68 @@ public class ManagerApp {
         System.out.println("2. Category");
         System.out.println("3. Date");
         int user_input = scanner.nextInt();
-        String query = "SELECT * FROM expenses WHERE ";
+        String query = "";
+        String value = "";
 
         switch (user_input) {
             case 1:
                 System.out.println("Enter employee id:");
-                int userId = scanner.nextInt();
-                query += "user_id = " + userId;
+                query = "SELECT * FROM expenses WHERE user_id = ?";
+                value = String.valueOf(scanner.nextInt());
                 break;
             case 2:
                 System.out.println("Enter Category:");
-                String category = scanner.nextLine();
-                query += "category = " + category;
+                query = "SELECT * FROM expenses WHERE category = ?";
+                value = scanner.nextLine();
                 break;
             case 3:
-                System.out.println("Enter Date:");
-                String date = scanner.nextLine();
-                query += "date = " + date;
+                System.out.println("Enter Date (DD/MM/YYYY):");
+                String inputDate = scanner.nextLine();
+
+                try {
+                    DateTimeFormatter inputFormatter =
+                        DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
+                    LocalDate dateObject =
+                        LocalDate.parse(inputDate, inputFormatter);
+
+                    DateTimeFormatter outputFormatter =
+                        DateTimeFormatter.ofPattern("MMMM dd, yyyy");
+
+                    value = dateObject.format(outputFormatter);
+
+                    query = "SELECT * FROM expenses WHERE date = ?";
+
+                } catch (DateTimeParseException e) {
+                    System.out.println("Not a valid date. Please try again!");
+                    return;
+                }
                 break;
+
             default:
                 break;
         }
 
        try (PreparedStatement stmt = conn.prepareStatement(query)){
+            stmt.setString(1, value);
             ResultSet rs = stmt.executeQuery();
+            double totalExpenseAmount = 0.0;
+            int expenseCount = 0;
+            while (rs.next()) {
+                System.out.println(
+                    "Expense ID: " + rs.getInt("id") +
+                    " Amount: " + rs.getDouble("amount") +
+                    " Description: " + rs.getString("description")
+                );
+
+                totalExpenseAmount += rs.getDouble("amount");
+                expenseCount++;
+            }
+            System.out.println("Report Aggregates: ");
+            System.out.println("Expense Count: " + expenseCount);
+            System.out.println("Total Amount: " + totalExpenseAmount);
+            System.out.println("Average Expense Cost:" + (totalExpenseAmount / expenseCount));
+
         } catch (SQLException e) {
             e.printStackTrace();
 
