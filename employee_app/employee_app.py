@@ -34,7 +34,7 @@ def main():
         print("1. Expense Manager")
         print("5. Quit")
 
-        user_input = input("Please enter a menu number")
+        user_input = input("Please enter a menu number: ")
         if not any(char.isdigit() for char in user_input):
             user_selection = ""
         else:
@@ -95,25 +95,38 @@ def add_employee(conn):
 
     cursor = conn.cursor()
     try:
-        user = cursor.execute("INSERT INTO users(username,password,role) VALUES(?,?,?)",(username,password,role))
+        cursor.execute("INSERT INTO users(username,password,role) VALUES(?,?,?)",(username,password,role))
         conn.commit()
+
+        cursor.execute(
+            "SELECT * FROM users WHERE username = ?",
+            (username,)
+        )
+        return cursor.fetchone()
+    
     except sqlite3.IntegrityError as e:
         print("Username is taken!")
         return add_employee(conn)
 
-    return user
 
 def expense_manager(conn):
     while True:
         print("Expense Menu:")
         print("Enter 1 to add an expense: ")
-        print("Enter 2 to check status of an expense:")
+        print("Enter 2 to view your expenses:" )
+        print("Enter 3 to delete an expense: ")
+        print("Enter 4 to edit an expense: ")
+
         user_input = int(input())
         match user_input:
             case 1:
                 add_expense(conn)
             case 2: 
-                check_expense_status()
+                check_expense_status(conn)
+            case 3: 
+                delete_expense(conn)
+            case 4: 
+                edit_expense(conn)
 
 
 def add_expense(conn):
@@ -121,6 +134,7 @@ def add_expense(conn):
     amount = float(input("Enter expense amount:"))
     description = input("Enter description: ")
     user_input = input("Enter a date (DD/MM/YYYY): ")  
+    category = input("Enter a category: ")
   
     try:
         date_object = datetime.strptime(user_input, "%d/%m/%Y") 
@@ -130,8 +144,8 @@ def add_expense(conn):
     formatted_date = date_object.strftime("%B %d, %Y")
     
     cursor.execute(
-        "INSERT INTO expenses(user_id, amount, description, date) VALUES (?, ?, ?, ?)",
-        (logged_in_as["id"], amount, description, formatted_date)
+        "INSERT INTO expenses(user_id, amount, category, description, date) VALUES (?, ?, ?, ?, ?)",
+        (logged_in_as["id"], amount, category, description, formatted_date)
     )
 
     expense_id = cursor.lastrowid
@@ -143,9 +157,57 @@ def add_expense(conn):
     conn.commit()
     print(f"Expense added: ")
 
-def check_expense_status():
-    #add later once we complete java
-    print(approvals)
+def print_expenses(expenses):
+    for expense in expenses:
+        print(
+            f"Expense ID: {expense['id']} | "
+            f"Amount: {expense['amount']} | "
+            f"Description: {expense['description']} | "
+            f"Category: {expense['category']} | "
+            f"Status: {expense['status']}"
+        )
+
+def check_expense_status(conn):
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
+                               approvals.expense_id = expenses.id WHERE expenses.user_id = ?""", 
+                               (logged_in_as["id"],))
+    
+    expenses = cursor.fetchall()
+    print_expenses(expenses)
+
+def view_pending_expenses(conn):
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
+                               approvals.expense_id = expenses.id WHERE expenses.user_id = ? AND approvals.status = ? """, 
+                               (logged_in_as["id"], "pending"))
+    
+    expenses = cursor.fetchall()
+    print_expenses(expenses)
+    
+
+def delete_expense(conn):
+    print("Here are your expenses")
+    view_pending_expenses(conn)
+    expense_id = int(input("Please enter the ID of the expense you would like to delete: "))
+    cursor =  conn.cursor()
+    cursor.execute(
+            "DELETE FROM approvals WHERE expense_id = ?",
+            (expense_id,)
+        )
+    cursor.execute(
+        "DELETE FROM expenses WHERE id = ?",
+        (expense_id,)
+    )
+
+    conn.commit()
+    print(f"Expense {expense_id} was deleted")
+
+
+def edit_expense(conn):
+    view_pending_expenses()
+
+
 
 if __name__ == "__main__":
     main()
