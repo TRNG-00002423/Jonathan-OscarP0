@@ -78,6 +78,7 @@ public class ManagerApp {
         }
         if (!user.getRole().equals("Manager")) {
             System.out.println("You do not have access to this application. Please use the Employee app.");
+            //TODO add break or exit here
         }
         return user;
 

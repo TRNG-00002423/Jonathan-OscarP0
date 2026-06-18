@@ -117,6 +117,7 @@ def expense_manager(conn):
         print("Enter 2 to view your expenses:" )
         print("Enter 3 to delete an expense: ")
         print("Enter 4 to edit an expense: ")
+        print("Enter 5 to view expense history")
 
         user_input = int(input())
         match user_input:
@@ -128,8 +129,12 @@ def expense_manager(conn):
                 delete_expense(conn)
             case 4: 
                 edit_expense(conn)
+            case 5: 
+                view_expense_history(conn)
+            
+            
 
-
+#TODO add validation
 def add_expense(conn):
     cursor = conn.cursor()
     amount = float(input("Enter expense amount:"))
@@ -228,7 +233,7 @@ def choose_expense(conn):
 
     return selected_id
     
-    
+
 #TODO add validation
 def edit_expense(conn):
     expense_id =  choose_expense(conn)
@@ -260,7 +265,15 @@ def edit_expense(conn):
     print("Expense updated successfully.")
 
 
-
+def view_expense_history(conn):
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
+                        approvals.expense_id = expenses.id WHERE expenses.user_id = ? 
+                        AND (approvals.status = ? OR approvals.status = ?)""", 
+                    (logged_in_as["id"], "approved", "denied"))
+    
+    expenses = cursor.fetchall()
+    print_expenses(expenses)
 
 if __name__ == "__main__":
     main()
