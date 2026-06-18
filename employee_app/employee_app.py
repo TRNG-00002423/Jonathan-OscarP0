@@ -87,9 +87,11 @@ def add_employee(conn):
     username = input()
     print("Enter password")
     password = input()
-    print("Enter 1 for Employee, Enter 2 for Manager")
-    role_input = int(input())
-    role = "Manager" if (role_input == 2) else "Employee"
+    #commented out to keep them more separate
+    # print("Enter 1 for Employee, Enter 2 for Manager")
+    # role_input = int(input())
+    # role = "Manager" if (role_input == 2) else "Employee"
+    role = "Employee"
 
     cursor = conn.cursor()
     try:

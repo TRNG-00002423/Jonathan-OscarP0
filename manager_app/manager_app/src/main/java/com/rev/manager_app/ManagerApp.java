@@ -164,6 +164,7 @@ public class ManagerApp {
         String approval = (user_option == 1) ? "approved" : "denied";
         System.out.println("Enter 1 to leave a comment with the review or 2 to continue");          
         user_option = scanner.nextInt();
+        scanner.nextLine();
         String userComment = null;
         if(user_option == 1){
             System.out.println("Please enter comment for the review");
@@ -192,13 +193,14 @@ public class ManagerApp {
         }
     }
 
-    // Add total amount, most common category
+    // Add most common category
     public static void generateReport(Scanner scanner, Connection conn) throws SQLException {
         System.out.println("Generate report by:");
         System.out.println("1. Employee");
         System.out.println("2. Category");
         System.out.println("3. Date");
         int user_input = scanner.nextInt();
+        scanner.nextLine();
         String query = "";
         String value = "";
 
@@ -259,7 +261,11 @@ public class ManagerApp {
             System.out.println("Report Aggregates: ");
             System.out.println("Expense Count: " + expenseCount);
             System.out.println("Total Amount: " + totalExpenseAmount);
-            System.out.println("Average Expense Cost:" + (totalExpenseAmount / expenseCount));
+            if (expenseCount > 0) {
+                System.out.println("Average Expense Cost: " + (totalExpenseAmount / expenseCount));
+            } else {
+                System.out.println("No expenses found.");
+            }
 
         } catch (SQLException e) {
             e.printStackTrace();
