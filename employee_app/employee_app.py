@@ -18,80 +18,68 @@ def main():
     
     print("*" * 20)
     print("Welcome to Revature Expense Manager!")
-    print("Please login")
     print("*" * 20)
 
     conn = sqlite3.connect("../database/expense_manager.db")
     conn.row_factory = sqlite3.Row
-    logged_in_as = login(conn)
+    logged_in_as = login_menu(conn)
     clear_console()
+    if logged_in_as != None:
+        expense_manager(conn)
 
 
-    print("*" * 20)
-    print("Welcome to the Menu")
-    print("*" * 20)
+def login_menu(conn):
+        choice = questionary.select(
+            "Employee Login",
+            choices=[
+                questionary.Choice("Login", "login"),
+                questionary.Choice("Create Account", "create")
+            ]
+        ).ask()
 
-    while True:
-        print("1. Expense Manager")
-        print("5. Quit")
-
-        user_input = input("Please enter a menu number: ")
-        if not any(char.isdigit() for char in user_input):
-            user_selection = ""
-        else:
-            user_selection = int(user_input)
-
-
-        match user_selection:
-            case 1:  
-                expense_manager(conn)
-                clear_console()
-            case 5:
-                conn.close()
-                break
-            case _:
-                print("Not a valid menu item")
-
+        if choice == "login":
+            return login(conn)
+        elif choice == "create":
+            return add_employee(conn)
+        
+    
 def login(conn):
-    while True:
-        print("Please enter your username: ")
-        username = input()  
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username = ?",(username,))
+    print("Please enter your username: ")
+    username = questionary.text(
+            "Enter username:"
+        ).ask()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ?",(username,))
+    result = cursor.fetchone()
 
-        result = cursor.fetchone()
+    if result is None:
+        print("User does not exist. Please try again or create an account.")
+        login_menu(conn)
 
-        if result is None:
-            print("User does not exist, Press 1 to create new employee, press 2 to try again")
-            user_input = int(input())
-            if user_input == 1:
-                new_employee = add_employee(conn)
-                print("Logged in now!")
-                return new_employee
-            else:
-                continue
-
+    tries = 5
+    while tries > 0:
         print("Please enter your password: ")
-        input_password = input()
-        
-        # give max amount of tries
-        if input_password != result["password"]:
-            print("Password is incorrect")
-            continue
-        
+        input_password = questionary.password(
+            "Enter password:"
+        ).ask()
+        if input_password == result["password"]:
+            print("Logged in now!")
+            return result   
 
-        print("Logged in now!")
-        return result
+        tries -= 1
+        print(f"Password is incorrect. You have {tries} remaining")
+
+    print("You have run out of attempts.")
+    return None
         
 def add_employee(conn):
-    print("Enter username")
-    username = input()
-    print("Enter password")
-    password = input()
-    #commented out to keep them more separate
-    # print("Enter 1 for Employee, Enter 2 for Manager")
-    # role_input = int(input())
-    # role = "Manager" if (role_input == 2) else "Employee"
+    username = questionary.text(
+            "Enter username:"
+        ).ask()
+    password = questionary.text(
+            "Enter passowrd:"
+        ).ask()
+    
     role = "Employee"
 
     cursor = conn.cursor()
@@ -106,44 +94,69 @@ def add_employee(conn):
         return cursor.fetchone()
     
     except sqlite3.IntegrityError as e:
-        print("Username is taken!")
-        return add_employee(conn)
+        print("Username is taken. Please try again or login if that is your account.")
+        return login_menu(conn)
 
 
 def expense_manager(conn):
     while True:
-        print("Expense Menu:")
-        print("Enter 1 to add an expense: ")
-        print("Enter 2 to view your expenses:" )
-        print("Enter 3 to delete an expense: ")
-        print("Enter 4 to edit an expense: ")
-        print("Enter 5 to view expense history")
-
-        user_input = int(input())
+        user_input = questionary.select(
+            "Main Menu",
+            choices=[
+                questionary.Choice("Add expense", "add_expense"),
+                questionary.Choice("View expenses", "view_expenses"),
+                questionary.Choice("Delete expense", "delete_expenses"),
+                questionary.Choice("Edit expense", "edit_expense"),
+                questionary.Choice("View history", "view_history"),
+                questionary.Choice("Exit", "exit")
+            ]
+        ).ask()
         match user_input:
-            case 1:
+            case "add_expense":
                 add_expense(conn)
-            case 2: 
+            case "view_expenses": 
                 check_expense_status(conn)
-            case 3: 
+            case "delete_expenses": 
                 delete_expense(conn)
-            case 4: 
+            case "edit_expense": 
                 edit_expense(conn)
-            case 5: 
+            case "view_history": 
                 view_expense_history(conn)
+            case "exit":
+                conn.close()
+                return None
             
             
 
-#TODO add validation
+def validate_date(date_string):
+    try:
+        datetime.strptime(date_string, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return "Please enter a valid date in YYYY-MM-DD format."
+
+
 def add_expense(conn):
     cursor = conn.cursor()
-    amount = float(input("Enter expense amount:"))
-    description = input("Enter description: ")
-    user_input = input("Enter a date (DD/MM/YYYY): ")  
-    category = input("Enter a category: ")
+    # amount = float(input("Enter expense amount:"))
+    amount = questionary.text(
+        "Enter expense amount:",
+        validate=lambda x: x.replace(".", "", 1).isdigit() and float(x) > 0
+    ).ask()
+    amount = float(amount)
+    description = questionary.text(
+            "Enter description (optional):"
+        ).ask()
+    category = questionary.text(
+        "Enter category (optional):"
+    ).ask()
+    user_date = questionary.text(
+            "Enter a date (YYYY-MM-DD):",
+            validate=validate_date
+    ).ask()
   
     try:
-        date_object = datetime.strptime(user_input, "%d/%m/%Y") 
+        date_object = datetime.strptime(user_date, "%Y-%m-%d")    
     except ValueError as e:
         print("Not a valid date. Please try again!")
         return None        
@@ -161,7 +174,7 @@ def add_expense(conn):
         (expense_id, "pending")
     )
     conn.commit()
-    print(f"Expense added: ")
+    print(f"Expense added!")
 
 def print_expenses(expenses):
     for expense in expenses:
