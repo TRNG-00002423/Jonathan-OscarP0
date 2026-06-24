@@ -5,6 +5,8 @@ from Employee import Employee
 from Expense import Expense
 from datetime import datetime
 from Approval import Approval
+import requests
+
 #adding this import, you may have to "pip install questionary"
 import questionary
 
@@ -38,36 +40,36 @@ def login_menu(conn):
         ).ask()
 
         if choice == "login":
-            return login(conn)
+            return login()
         elif choice == "create":
             return add_employee(conn)
         
     
-def login(conn):
-    print("Please enter your username: ")
-    username = questionary.text(
-            "Enter username:"
-        ).ask()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE username = ?",(username,))
-    result = cursor.fetchone()
 
-    if result is None:
-        print("User does not exist. Please try again or create an account.")
-        login_menu(conn)
+def login():
+    username = questionary.text("Enter username:").ask()
 
     tries = 5
+
     while tries > 0:
-        print("Please enter your password: ")
-        input_password = questionary.password(
-            "Enter password:"
-        ).ask()
-        if input_password == result["password"]:
-            print("Logged in now!")
-            return result   
+        password = questionary.password("Enter password:").ask()
+
+        response = requests.post(
+            "http://127.0.0.1:5000/login",
+            json={
+                "username": username,
+                "password": password
+            }
+        )
+
+        result = response.json()
+
+        if response.status_code == 200 and result.get("success"):
+            print("Logged in successfully!")
+            return result["user"]
 
         tries -= 1
-        print(f"Password is incorrect. You have {tries} attempts remaining")
+        print(f"Incorrect password. Attempts left: {tries}")
 
     print("You have run out of attempts.")
     return None
