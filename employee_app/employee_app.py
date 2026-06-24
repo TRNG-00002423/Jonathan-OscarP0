@@ -67,7 +67,7 @@ def login(conn):
             return result   
 
         tries -= 1
-        print(f"Password is incorrect. You have {tries} remaining")
+        print(f"Password is incorrect. You have {tries} attempts remaining")
 
     print("You have run out of attempts.")
     return None
@@ -138,7 +138,6 @@ def validate_date(date_string):
 
 def add_expense(conn):
     cursor = conn.cursor()
-    # amount = float(input("Enter expense amount:"))
     amount = questionary.text(
         "Enter expense amount:",
         validate=lambda x: x.replace(".", "", 1).isdigit() and float(x) > 0
@@ -193,7 +192,10 @@ def check_expense_status(conn):
                                (logged_in_as["id"],))
     
     expenses = cursor.fetchall()
-    print_expenses(expenses)
+    if len(expenses) == 0:
+        print("You have no expenses.")
+    else: 
+        print_expenses(expenses)
 
 def view_pending_expenses(conn):
     cursor = conn.cursor()
@@ -202,14 +204,16 @@ def view_pending_expenses(conn):
                                (logged_in_as["id"], "pending"))
     
     expenses = cursor.fetchall()
-    print_expenses(expenses)
+    if len(expenses) == 0:
+        print("You have no pendings expenses.")
+    else: 
+        print_expenses(expenses)
     
 
 def delete_expense(conn):
-    # print("Here are your expenses")
-    # view_pending_expenses(conn)
-    # expense_id = int(input("Please enter the ID of the expense you would like to delete: "))
     expense_id =  choose_expense(conn)
+    if expense_id == "BACK":
+        return
     cursor =  conn.cursor()
     cursor.execute(
             "DELETE FROM approvals WHERE expense_id = ?",
@@ -232,13 +236,21 @@ def choose_expense(conn):
                                (logged_in_as["id"], "pending"))
     
     expenses = cursor.fetchall()
+    if len(expenses) == 0:
+        print("You have no expenses to select.")
+        return "BACK"
+           
 
     expense_options = [questionary.Choice(
-            title=f"{row['id']} | ${row['amount']} | {row['description']} | {row['category']} | {row['status']}", 
+            title=f"Expense ID: {row['id']} | Amount: ${row['amount']} | Description: {row['description']} | Category: {row['category']} | Status: {row['status']}", 
             value=row['id']
         )
         for row in expenses
     ]
+    expense_options.append(
+        questionary.Choice("Go Back", "BACK")
+    )
+
     selected_id = questionary.select(
         "What expense would you like to select?",
         choices=expense_options
@@ -247,9 +259,10 @@ def choose_expense(conn):
     return selected_id
     
 
-#TODO add validation
 def edit_expense(conn):
     expense_id =  choose_expense(conn)
+    if expense_id == "BACK":
+        return
     cursor =  conn.cursor()
     cursor.execute("SELECT * FROM expenses WHERE expenses.id = ?", (expense_id,))
     expense = cursor.fetchone()
@@ -257,16 +270,32 @@ def edit_expense(conn):
     while True:
         updated_field = questionary.select(
             "What would you like to edit?",
-            choices=["amount", "description", "category", "date", "QUIT"]
+            choices=["amount", "description", "category", "date", "DONE"]
         ).ask()
 
-        if updated_field == "QUIT":
-            break
 
-        new_value = questionary.text(
-            f"Enter new {updated_field}:",
-            default=str(expense[updated_field])
-        ).ask()
+        match updated_field:
+            case "DONE":
+                break
+            case "amount":
+                new_value = questionary.text(
+                    "Enter expense amount:",
+                    validate=lambda x: x.replace(".", "", 1).isdigit() and float(x) > 0
+                ).ask()
+                new_value = float(new_value)
+            case "description":
+                new_value = questionary.text(
+                        "Enter description (optional):"
+                    ).ask()
+            case "category":
+                new_value = questionary.text(
+                    "Enter category (optional):"
+                ).ask()
+            case "date":
+                new_value = questionary.text(
+                        "Enter a date (YYYY-MM-DD):",
+                        validate=validate_date
+                ).ask()
 
         cursor.execute(
             f"UPDATE expenses SET {updated_field} = ? WHERE id = ?",
@@ -274,8 +303,10 @@ def edit_expense(conn):
         )
 
         conn.commit()
+        print("Expense updated successfully.")
+        print("Please edit another field or DONE")
 
-    print("Expense updated successfully.")
+    
 
 
 def view_expense_history(conn):
@@ -286,7 +317,10 @@ def view_expense_history(conn):
                     (logged_in_as["id"], "approved", "denied"))
     
     expenses = cursor.fetchall()
-    print_expenses(expenses)
+    if len(expenses) == 0:
+        print("You have no expense history.")
+    else: 
+        print_expenses(expenses)
 
 if __name__ == "__main__":
     main()
