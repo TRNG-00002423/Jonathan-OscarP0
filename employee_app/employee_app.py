@@ -1,36 +1,25 @@
-import os
-import sqlite3
 from output_utils import clear_console
 from Employee import Employee
 from Expense import Expense
 from datetime import datetime
 from Approval import Approval
 import requests
-
-#adding this import, you may have to "pip install questionary"
 import questionary
 
 def main():
-    global expenses
-    expenses = []
-    global approvals
-    approvals = []
     global logged_in_as 
-    
-    
     print("*" * 20)
     print("Welcome to Revature Expense Manager!")
     print("*" * 20)
 
-    conn = sqlite3.connect("../database/expense_manager.db")
-    conn.row_factory = sqlite3.Row
-    logged_in_as = login_menu(conn)
+    
+    logged_in_as = login_menu()
     clear_console()
     if logged_in_as != None:
-        expense_manager(conn)
+        expense_manager()
 
 
-def login_menu(conn):
+def login_menu():
         choice = questionary.select(
             "Employee Login",
             choices=[
@@ -40,17 +29,15 @@ def login_menu(conn):
         ).ask()
 
         if choice == "login":
-            return login(conn)
+            return login()
         elif choice == "create":
-            return add_employee(conn)
+            return add_employee()
         
     
 
-def login(conn):
+def login():
     username = questionary.text("Enter username:").ask()
-
     tries = 5
-
     while tries > 0:
         password = questionary.password("Enter password:").ask()
 
@@ -61,17 +48,14 @@ def login(conn):
                 "password": password
             }
         )
-
         result = response.json()
-
         if response.status_code == 200 and result.get("success"):
             print("Logged in successfully!")
             return result["user"]
         
         if response.status_code == 404 and result.get("success") == False:
             print(result["message"])
-            return login_menu(conn)
-
+            return login_menu()
 
         tries -= 1
         print(f"{result['message']}. Attempts left: {tries}")
@@ -79,7 +63,7 @@ def login(conn):
     print("You have run out of attempts.")
     return None
         
-def add_employee(conn):
+def add_employee():
     username = questionary.text(
             "Enter username:"
         ).ask()
@@ -106,10 +90,10 @@ def add_employee(conn):
     
     if response.status_code == 400 and result.get("success") == False:
         print(result["message"])
-        return login_menu(conn)
+        return login_menu()
 
 
-def expense_manager(conn):
+def expense_manager():
     while True:
         user_input = questionary.select(
             "Main Menu",
@@ -124,17 +108,16 @@ def expense_manager(conn):
         ).ask()
         match user_input:
             case "add_expense":
-                add_expense(conn)
+                add_expense()
             case "view_expenses": 
-                check_expense_status(conn)
+                check_expense_status()
             case "delete_expenses": 
-                delete_expense(conn)
+                delete_expense()
             case "edit_expense": 
-                edit_expense(conn)
+                edit_expense()
             case "view_history": 
-                view_expense_history(conn)
+                view_expense_history()
             case "exit":
-                conn.close()
                 return None
             
             
@@ -147,8 +130,7 @@ def validate_date(date_string):
         return "Please enter a valid date in YYYY-MM-DD format."
 
 
-def add_expense(conn):
-    cursor = conn.cursor()
+def add_expense():
     amount = questionary.text(
         "Enter expense amount:",
         validate=lambda x: x.replace(".", "", 1).isdigit() and float(x) > 0
@@ -171,20 +153,21 @@ def add_expense(conn):
         print("Not a valid date. Please try again!")
         return None        
     formatted_date = date_object.strftime("%B %d, %Y")
-    
-    cursor.execute(
-        "INSERT INTO expenses(user_id, amount, category, description, date) VALUES (?, ?, ?, ?, ?)",
-        (logged_in_as["id"], amount, category, description, formatted_date)
-    )
 
-    expense_id = cursor.lastrowid
-
-    cursor.execute(
-        "INSERT INTO approvals(expense_id, status) VALUES (?, ?)",
-        (expense_id, "pending")
+    response = requests.post(
+        "http://127.0.0.1:5000/expense",
+        json={
+            "user_id": logged_in_as["id"],
+            "amount": amount,
+            "category": category,
+            "description": description,
+            "date": formatted_date
+        }
     )
-    conn.commit()
-    print(f"Expense added!")
+    if response.status_code == 201:
+        print("Expense added!")
+    else:
+        print("Failed to add expense.")
 
 def print_expenses(expenses):
     for expense in expenses:
@@ -196,62 +179,30 @@ def print_expenses(expenses):
             f"Status: {expense['status']}"
         )
 
-def check_expense_status(conn):
-    cursor = conn.cursor()
-    cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
-                               approvals.expense_id = expenses.id WHERE expenses.user_id = ?""", 
-                               (logged_in_as["id"],))
-    
-    expenses = cursor.fetchall()
+def check_expense_status():
+    response = requests.get(f"http://127.0.0.1:5000/expenses/{logged_in_as['id']}")
+    expenses = response.json() 
     if len(expenses) == 0:
         print("You have no expenses.")
     else: 
         print_expenses(expenses)
 
-def view_pending_expenses(conn):
-    cursor = conn.cursor()
-    cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
-                               approvals.expense_id = expenses.id WHERE expenses.user_id = ? AND approvals.status = ? """, 
-                               (logged_in_as["id"], "pending"))
-    
-    expenses = cursor.fetchall()
-    if len(expenses) == 0:
-        print("You have no pendings expenses.")
-    else: 
-        print_expenses(expenses)
-    
 
-def delete_expense(conn):
-    expense_id =  choose_expense(conn)
+def delete_expense():
+    expense_id =  choose_expense()
     if expense_id == "BACK":
         return
-    cursor =  conn.cursor()
-    cursor.execute(
-            "DELETE FROM approvals WHERE expense_id = ?",
-            (expense_id,)
-        )
-    cursor.execute(
-        "DELETE FROM expenses WHERE id = ?",
-        (expense_id,)
-    )
-
-    conn.commit()
-    print(f"Expense {expense_id} was deleted")
+    response = requests.delete(f"http://127.0.0.1:5000/expense/{expense_id}")
+    print(response.json()["message"])
 
 
-
-def choose_expense(conn):
-    cursor = conn.cursor()
-    cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
-                               approvals.expense_id = expenses.id WHERE expenses.user_id = ? AND approvals.status = ? """, 
-                               (logged_in_as["id"], "pending"))
-    
-    expenses = cursor.fetchall()
+def choose_expense():
+    response = requests.get(f"http://127.0.0.1:5000/expenses/{logged_in_as['id']}/pending")
+    expenses = response.json()
     if len(expenses) == 0:
         print("You have no expenses to select.")
         return "BACK"
            
-
     expense_options = [questionary.Choice(
             title=f"Expense ID: {row['id']} | Amount: ${row['amount']} | Description: {row['description']} | Category: {row['category']} | Status: {row['status']}", 
             value=row['id']
@@ -270,20 +221,16 @@ def choose_expense(conn):
     return selected_id
     
 
-def edit_expense(conn):
-    expense_id =  choose_expense(conn)
+def edit_expense():
+    expense_id =  choose_expense()
     if expense_id == "BACK":
         return
-    cursor =  conn.cursor()
-    cursor.execute("SELECT * FROM expenses WHERE expenses.id = ?", (expense_id,))
-    expense = cursor.fetchone()
 
     while True:
         updated_field = questionary.select(
             "What would you like to edit?",
             choices=["amount", "description", "category", "date", "DONE"]
         ).ask()
-
 
         match updated_field:
             case "DONE":
@@ -308,26 +255,17 @@ def edit_expense(conn):
                         validate=validate_date
                 ).ask()
 
-        cursor.execute(
-            f"UPDATE expenses SET {updated_field} = ? WHERE id = ?",
-            (new_value, expense_id)
-        )
-
-        conn.commit()
-        print("Expense updated successfully.")
+        response = requests.put(f"http://127.0.0.1:5000/expense/{expense_id}",
+                json={updated_field: new_value})
+        print(response.json()["message"])
         print("Please edit another field or DONE")
 
     
 
 
-def view_expense_history(conn):
-    cursor = conn.cursor()
-    cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
-                        approvals.expense_id = expenses.id WHERE expenses.user_id = ? 
-                        AND (approvals.status = ? OR approvals.status = ?)""", 
-                    (logged_in_as["id"], "approved", "denied"))
-    
-    expenses = cursor.fetchall()
+def view_expense_history():
+    response = requests.get(f"http://127.0.0.1:5000/expenses/{logged_in_as['id']}/history")
+    expenses = response.json() 
     if len(expenses) == 0:
         print("You have no expense history.")
     else: 
