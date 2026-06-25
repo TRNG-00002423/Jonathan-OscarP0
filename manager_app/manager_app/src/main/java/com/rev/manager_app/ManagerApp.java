@@ -4,12 +4,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Optional;
 import java.util.Scanner;
 
+import com.rev.dao.DAO.UserDAO;
+import com.rev.dao.DAO.UserDAOImpl;
 import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
 
@@ -17,7 +19,14 @@ public class ManagerApp {
     public static void main(String[] args) {
         Connection conn = DatabaseConnectionUtil.getConnection();
         Scanner scanner = new Scanner(System.in);
-        User user = accessAccount(scanner, conn);
+        UserDAO userDAO = new UserDAOImpl(conn);
+        User user = null;
+        try {
+            user = accessAccount(scanner, userDAO);
+        } catch (SQLException ex) {
+            System.out.println("Database error occurred.");
+            ex.printStackTrace();
+        }
 
         System.out.println("Welcome to the Menu!");
         
@@ -59,19 +68,19 @@ public class ManagerApp {
 
     }
 
-    public static User accessAccount(Scanner scanner, Connection conn) {
+    public static User accessAccount(Scanner scanner, UserDAO userDAO) throws SQLException {
         System.out.println("Please enter 1 if you have an existing account");
         System.out.println("Please enter 2 if you would like to create an account");
         int input = scanner.nextInt();
         User user = null;
         if (input == 1) {
             while (user == null) {
-                user = login(scanner, conn);
+                user = loginFlow(scanner, userDAO);
             }
         } else if (input == 2) {
             while (user == null) {
                 try {
-                    user = createUser(scanner, conn);
+                    user = createUser(scanner);
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
@@ -85,39 +94,31 @@ public class ManagerApp {
 
     }
 
-    public static User login(Scanner scanner, Connection conn) {
+    public static User loginFlow(Scanner scanner, UserDAO userDAO) throws SQLException {
         System.out.println("Please enter a username");
         String username = scanner.next();
         System.out.println("Please enter a password");
         String password = scanner.next();
-        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
-        User user = null;
-        try (PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setString(1, username);
-            stmt.setString(2, password);
+        
+        Optional<User> user = userDAO.login(username, password);
 
-            ResultSet result = stmt.executeQuery();
-            if (result.next()) {
-                user = new User(result.getInt("id"), result.getString("username"),
-                        result.getString("password"), result.getString("role"));
-                System.out.println("Logged in as " + user);
-            } else {
-                System.out.println("Username or password is incorrect.");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        if (user.isPresent()) {
+            System.out.println("Login successful!");
+            return user.get();
+        } else {
+            System.out.println("Invalid credentials.");
+            return null;
         }
-        return user;
     }
 
-    public static User createUser(Scanner scanner, Connection conn) throws SQLException {
+    public static User createUser(Scanner scanner) throws SQLException {
         System.out.println("Please enter a username");
         String username = scanner.next();
         System.out.println("Please enter a password");
         String password = scanner.next();
         String query = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
         User user = null;
-        try (PreparedStatement stmt = conn.prepareStatement(
+        /*try (PreparedStatement stmt = conn.prepareStatement(
                 query, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, username);
             stmt.setString(2, password);
@@ -133,7 +134,7 @@ public class ManagerApp {
             return user;
 
         }
-        System.out.println("User created successfully: " + user);
+        System.out.println("User created successfully: " + user);*/
         return user;
     }
 

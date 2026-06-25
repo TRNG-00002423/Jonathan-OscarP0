@@ -15,4 +15,6 @@ public interface ApprovalDAO {
     List<Approval> getApprovalHistory();
 
     List<Approval> getApprovalHistoryByManager(int managerId);
+
+    boolean updateApproval(int expenseId, int managerId, String status, String comment, String date);
 }
