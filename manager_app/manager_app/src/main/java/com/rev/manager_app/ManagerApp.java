@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 
+import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
 
 public class ManagerApp { 
