@@ -1,23 +1,23 @@
 package com.rev.dao.DAO;
 
 import java.util.List;
-import java.util.Optional;
 
+import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
 
+
 public interface ExpenseDAO {
+    //void createExpense(Expense expense);
 
-    void createExpense(Expense expense);
+    //Optional<Expense> findExpenseById(int id);
 
-    Optional<Expense> findExpenseById(int id);
+    List<ExpenseWithStatusDTO> getPendingExpenses();
 
-    List<Expense> getPendingExpenses();
+    List<ExpenseWithStatusDTO> getExpensesByEmployee(int userId);
 
-    List<Expense> getExpensesByEmployee(int userId);
-
-    List<Expense> getExpensesByCategory(String category);
+    List<ExpenseWithStatusDTO> getExpensesByCategory(String category);
     
-    List<Expense> getExpensesByDate(String date);
+    List<ExpenseWithStatusDTO> getExpensesByDate(String date);
 
     void updateExpense(Expense expense);
     

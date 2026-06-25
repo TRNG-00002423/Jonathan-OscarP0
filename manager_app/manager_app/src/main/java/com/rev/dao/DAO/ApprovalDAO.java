@@ -1,5 +1,6 @@
 package com.rev.dao.DAO;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,5 +17,5 @@ public interface ApprovalDAO {
 
     List<Approval> getApprovalHistoryByManager(int managerId);
 
-    boolean updateApproval(int expenseId, int managerId, String status, String comment, String date);
+    void updateApproval(int expenseId, int managerId, String status, String comment, String date) throws SQLException;
 }
