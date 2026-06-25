@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,8 +19,36 @@ public class UserDAOImpl implements UserDAO{
     }
 
     @Override
-    public User createUser(String username, String password, String role) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public User createUser(String username, String password) throws SQLException {
+
+        String query = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
+
+        try (PreparedStatement stmt = conn.prepareStatement(
+                query, Statement.RETURN_GENERATED_KEYS)) {
+
+            stmt.setString(1, username);
+            stmt.setString(2, password);
+            stmt.setString(3, "Manager");
+
+            int rows = stmt.executeUpdate();
+
+            if (rows != 1) {
+                throw new SQLException("Failed to create user");
+            }
+
+            ResultSet keys = stmt.getGeneratedKeys();
+
+            if (keys.next()) {
+                return new User(
+                    keys.getInt(1),
+                    username,
+                    password,
+                    "Manager"
+                );
+            }
+
+            throw new SQLException("No generated key returned");
+        }
     }
 
     @Override

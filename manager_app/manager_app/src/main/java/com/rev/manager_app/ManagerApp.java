@@ -80,7 +80,7 @@ public class ManagerApp {
         } else if (input == 2) {
             while (user == null) {
                 try {
-                    user = createUser(scanner);
+                    user = newUser(scanner, userDAO);
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
@@ -111,31 +111,17 @@ public class ManagerApp {
         }
     }
 
-    public static User createUser(Scanner scanner) throws SQLException {
+    public static User newUser(Scanner scanner, UserDAO userDAO) throws SQLException {
         System.out.println("Please enter a username");
         String username = scanner.next();
         System.out.println("Please enter a password");
         String password = scanner.next();
-        String query = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
-        User user = null;
-        /*try (PreparedStatement stmt = conn.prepareStatement(
-                query, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setString(1, username);
-            stmt.setString(2, password);
-            stmt.setString(3, "Manager");
-            stmt.executeUpdate();
-            ResultSet keys = stmt.getGeneratedKeys();
-            if (keys.next()) {
-                int id = keys.getInt(1);
-                user = new User(id, username, password, "Manager");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return user;
 
-        }
-        System.out.println("User created successfully: " + user);*/
+        User user = userDAO.createUser(username, password);
+
+        System.out.println("User created successfully!");
         return user;
+        
     }
 
     public static void viewPendingExpenses(Connection conn) throws SQLException {
