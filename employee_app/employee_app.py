@@ -40,13 +40,13 @@ def login_menu(conn):
         ).ask()
 
         if choice == "login":
-            return login()
+            return login(conn)
         elif choice == "create":
             return add_employee(conn)
         
     
 
-def login():
+def login(conn):
     username = questionary.text("Enter username:").ask()
 
     tries = 5
@@ -67,9 +67,14 @@ def login():
         if response.status_code == 200 and result.get("success"):
             print("Logged in successfully!")
             return result["user"]
+        
+        if response.status_code == 404 and result.get("success") == False:
+            print(result["message"])
+            return login_menu(conn)
+
 
         tries -= 1
-        print(f"Incorrect password. Attempts left: {tries}")
+        print(f"{result['message']}. Attempts left: {tries}")
 
     print("You have run out of attempts.")
     return None
@@ -79,24 +84,28 @@ def add_employee(conn):
             "Enter username:"
         ).ask()
     password = questionary.text(
-            "Enter passowrd:"
+            "Enter password:"
         ).ask()
     
     role = "Employee"
 
-    cursor = conn.cursor()
-    try:
-        cursor.execute("INSERT INTO users(username,password,role) VALUES(?,?,?)",(username,password,role))
-        conn.commit()
+    response = requests.post(
+        "http://127.0.0.1:5000/user",
+        json={
+            "username": username,
+            "password": password,
+            "role": role
+        }
+    )
 
-        cursor.execute(
-            "SELECT * FROM users WHERE username = ?",
-            (username,)
-        )
-        return cursor.fetchone()
+    result = response.json()
+
+    if response.status_code == 201 and result.get("success"):
+        print("User added successfully!")
+        return result["user"]
     
-    except sqlite3.IntegrityError as e:
-        print("Username is taken. Please try again or login if that is your account.")
+    if response.status_code == 400 and result.get("success") == False:
+        print(result["message"])
         return login_menu(conn)
 
 
