@@ -83,5 +83,188 @@ def create_user():
             "message": "Username is taken"
         }), 400
 
+
+@app.post("/expense")
+def add_expense():
+    data = request.json
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO expenses(user_id, amount, category, description, date) VALUES (?, ?, ?, ?, ?)",
+            (
+                data["user_id"],
+                data["amount"],
+                data["category"],
+                data["description"],
+                data["date"]
+            )
+        )
+
+        expense_id = cursor.lastrowid
+
+        cursor.execute(
+            "INSERT INTO approvals(expense_id, status) VALUES (?, ?)",
+            (expense_id, "pending")
+        )
+
+        conn.commit()
+
+        return jsonify({
+            "message": "Expense added successfully",
+            "expense_id": expense_id
+        }), 201
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({
+            "message": "Failed to add expense",
+            "error": str(e)
+        }), 400
+
+@app.get("/expenses/<int:user_id>")
+def get_expenses(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT * FROM expenses
+            JOIN approvals ON approvals.expense_id = expenses.id
+            WHERE expenses.user_id = ?
+        """, (user_id,))
+        expenses = [dict(row) for row in cursor.fetchall()]
+        return jsonify(expenses), 200
+
+    except Exception as e:
+        return jsonify({
+            "message": "Could not retrieve expenses",
+            "error": str(e)
+        }), 500
+
+    finally:
+        conn.close()
+
+@app.get("/expenses/<int:user_id>/pending")
+def get_pending_expenses(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
+            approvals.expense_id = expenses.id WHERE expenses.user_id = ? AND approvals.status = ? """, 
+            (user_id, "pending"))
+        expenses = [dict(row) for row in cursor.fetchall()]
+        return jsonify(expenses), 200
+
+    except Exception as e:
+        return jsonify({
+            "message": "Could not retrieve expenses",
+            "error": str(e)
+        }), 500
+
+    finally:
+        conn.close()
+
+@app.get("/expenses/<int:user_id>/history")
+def get_expense_history(user_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""SELECT * FROM expenses JOIN approvals ON 
+                approvals.expense_id = expenses.id WHERE expenses.user_id = ? 
+                AND (approvals.status = ? OR approvals.status = ?)""", 
+            (user_id, "approved", "denied"))
+        expenses = [dict(row) for row in cursor.fetchall()]
+        return jsonify(expenses), 200
+
+    except Exception as e:
+        return jsonify({
+            "message": "Could not retrieve expenses",
+            "error": str(e)
+        }), 500
+
+    finally:
+        conn.close()
+
+
+@app.delete("/expense/<int:expense_id>")
+def delete_expense(expense_id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "DELETE FROM approvals WHERE expense_id = ?",
+            (expense_id,)
+        )
+        cursor.execute(
+            "DELETE FROM expenses WHERE id = ?",
+            (expense_id,)
+        )
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return jsonify({
+                "message": "Expense not found"
+            }), 404
+        conn.commit()
+        return jsonify({
+            "message": f"Expense {expense_id} deleted successfully"
+        }), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({
+            "message": "Delete failed",
+            "error": str(e)
+        }), 500
+
+    finally:
+        conn.close()
+
+@app.put("/expense/<int:expense_id>")
+def edit_expense(expense_id):
+    data = request.json
+
+    allowed_fields = ["amount", "category", "description", "date"]
+    updates = {k: v for k, v in data.items() if k in allowed_fields}
+    if not updates:
+        return jsonify({
+            "message": "No valid fields provided"
+        }), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        set_clause = ", ".join([f"{field} = ?" for field in updates.keys()])
+        values = list(updates.values())
+        values.append(expense_id)
+
+        cursor.execute(
+            f"UPDATE expenses SET {set_clause} WHERE id = ?",
+            values
+        )
+
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return jsonify({
+                "message": "Expense not found"
+            }), 404
+
+        conn.commit()
+
+        return jsonify({
+            "message": f"Expense {expense_id} updated successfully"
+        }), 200
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({
+            "message": "Update failed",
+            "error": str(e)
+        }), 500
+
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     app.run()
