@@ -1,3 +1,10 @@
 __pycache__/
 revex/
 venv
+__pycache__/
+revex/
+target/
+*.class
+*.db
+.idea/
+.vscode/
