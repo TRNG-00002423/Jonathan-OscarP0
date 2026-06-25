@@ -5,7 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.List;
 import java.util.Optional;
 
 import com.rev.dao.model.User;
@@ -52,11 +51,6 @@ public class UserDAOImpl implements UserDAO{
     }
 
     @Override
-    public Optional<User> findUserByid(int id) throws Exception {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
     public Optional<User> login(String username, String password) throws SQLException {
         String query = "SELECT * FROM users WHERE username = ? AND password = ?";
         try (PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -74,21 +68,6 @@ public class UserDAOImpl implements UserDAO{
             e.printStackTrace();
         }
         return Optional.empty();
-    }
-
-    @Override
-    public void updateUser(User user) throws SQLException {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void deleteUserById(int id) throws SQLException {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public List<User> findAll() throws SQLException {
-        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     private User mapRow(ResultSet rs) throws SQLException {

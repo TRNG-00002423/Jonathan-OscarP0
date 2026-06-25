@@ -44,14 +44,13 @@ public class Expense {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Expense{");
-        sb.append("id=").append(id);
-        sb.append(", userId=").append(userId);
-        sb.append(", amount=").append(amount);
-        sb.append(", category=").append(category);
-        sb.append(", description=").append(description);
-        sb.append(", date=").append(date);
-        sb.append('}');
+        sb.append("Expense ");
+        sb.append(" ID: ").append(id);
+        sb.append(" | UserID: ").append(userId);
+        sb.append(" | Amount: ").append(amount);
+        sb.append(" | Category: ").append(category);
+        sb.append(" | Description: ").append(description);
+        sb.append(" | Date: ").append(date);
         return sb.toString();
     }
 
