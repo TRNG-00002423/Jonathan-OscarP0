@@ -1,4 +1,4 @@
-package com.rev.manager_app;
+package com.rev.dao.model;
 
 public class User {
     private final int id;
