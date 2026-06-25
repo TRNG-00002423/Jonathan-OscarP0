@@ -1,2 +1,7 @@
 __pycache__/
 revex/
+target/
+*.class
+*.db
+.idea/
+.vscode/
