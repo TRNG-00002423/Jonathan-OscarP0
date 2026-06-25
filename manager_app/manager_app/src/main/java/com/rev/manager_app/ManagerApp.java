@@ -4,40 +4,59 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Optional;
 import java.util.Scanner;
 
+import com.rev.dao.DAO.ApprovalDAO;
+import com.rev.dao.DAO.ApprovalDAOImpl;
+import com.rev.dao.DAO.ExpenseDAO;
+import com.rev.dao.DAO.ExpenseDAOImpl;
+import com.rev.dao.DAO.UserDAO;
+import com.rev.dao.DAO.UserDAOImpl;
+import com.rev.dao.dto.ExpenseWithStatusDTO;
+import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
 
 public class ManagerApp { 
     public static void main(String[] args) {
         Connection conn = DatabaseConnectionUtil.getConnection();
         Scanner scanner = new Scanner(System.in);
-        User user = accessAccount(scanner, conn);
+        UserDAO userDAO = new UserDAOImpl(conn);
+        ExpenseDAO expenseDAO = new ExpenseDAOImpl(conn);
+        ApprovalDAO approvalDAO = new ApprovalDAOImpl(conn);
+
+        User user = null;
+        try {
+            user = accessAccount(scanner, userDAO);
+        } catch (SQLException ex) {
+            System.out.println("Database error occurred.");
+            ex.printStackTrace();
+        }
 
         System.out.println("Welcome to the Menu!");
         
         while(true){
-            System.out.println("\nPlease enter 1 to view pending expenses");
-            System.out.println("Please enter 2 to approve/deny an expense");
-            System.out.println("Please enter 3 to generate a report for an expense");
-            System.out.println("Please enter 4 to exit the app");
+            System.out.println("\n1. View pending expenses");
+            System.out.println("2. Approve/deny an expense");
+            System.out.println("3. Generate a report for an expense");
+            System.out.println("4. Exit the app");
             int input = scanner.nextInt();
 
             switch (input){
                 case 1:
                     try {
-                        viewPendingExpenses(conn);
+                        viewPendingExpenses(expenseDAO);
                     } catch (SQLException e) {
                         System.out.println(e.getMessage());
                     }
                     break;
                 case 2:
                     try {
-                        reviewExpense(scanner, conn, user);
+                        reviewExpense(scanner, user, expenseDAO, approvalDAO);
                     } catch (SQLException e) {
                         System.out.println(e.getMessage());
                     }
@@ -58,19 +77,19 @@ public class ManagerApp {
 
     }
 
-    public static User accessAccount(Scanner scanner, Connection conn) {
+    public static User accessAccount(Scanner scanner, UserDAO userDAO) throws SQLException {
         System.out.println("Please enter 1 if you have an existing account");
         System.out.println("Please enter 2 if you would like to create an account");
         int input = scanner.nextInt();
         User user = null;
         if (input == 1) {
             while (user == null) {
-                user = login(scanner, conn);
+                user = loginFlow(scanner, userDAO);
             }
         } else if (input == 2) {
             while (user == null) {
                 try {
-                    user = createUser(scanner, conn);
+                    user = newUser(scanner, userDAO);
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
@@ -84,91 +103,62 @@ public class ManagerApp {
 
     }
 
-    public static User login(Scanner scanner, Connection conn) {
+    public static User loginFlow(Scanner scanner, UserDAO userDAO) throws SQLException {
         System.out.println("Please enter a username");
         String username = scanner.next();
         System.out.println("Please enter a password");
         String password = scanner.next();
-        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
-        User user = null;
-        try (PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setString(1, username);
-            stmt.setString(2, password);
+        
+        Optional<User> user = userDAO.login(username, password);
 
-            ResultSet result = stmt.executeQuery();
-            if (result.next()) {
-                user = new User(result.getInt("id"), result.getString("username"),
-                        result.getString("password"), result.getString("role"));
-                System.out.println("Logged in as " + user);
-            } else {
-                System.out.println("Username or password is incorrect.");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        if (user.isPresent()) {
+            System.out.println("Login successful!");
+            return user.get();
+        } else {
+            System.out.println("Invalid credentials.");
+            return null;
         }
-        return user;
     }
 
-    public static User createUser(Scanner scanner, Connection conn) throws SQLException {
+    public static User newUser(Scanner scanner, UserDAO userDAO) throws SQLException {
         System.out.println("Please enter a username");
         String username = scanner.next();
         System.out.println("Please enter a password");
         String password = scanner.next();
-        String query = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
-        User user = null;
-        try (PreparedStatement stmt = conn.prepareStatement(
-                query, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setString(1, username);
-            stmt.setString(2, password);
-            stmt.setString(3, "Manager");
-            stmt.executeUpdate();
-            ResultSet keys = stmt.getGeneratedKeys();
-            if (keys.next()) {
-                int id = keys.getInt(1);
-                user = new User(id, username, password, "Manager");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return user;
 
-        }
-        System.out.println("User created successfully: " + user);
-        return user;
+        User user = userDAO.createUser(username, password);
+
+        System.out.println("User created successfully!");
+        return user; 
     }
 
-    public static void viewPendingExpenses(Connection conn) throws SQLException {
-        String query = "SELECT expenses.user_id as user_id, expenses.amount, expenses.description, expenses.date, approvals.expense_id, approvals.status, approvals.reviewer, approvals.comment, approvals.review_date FROM expenses JOIN approvals ON expenses.id = approvals.expense_id WHERE approvals.status = ?";
-        String status = "pending";
+    public static void viewPendingExpenses(ExpenseDAO expenseDAO) throws SQLException {
 
-        try (PreparedStatement stmt = conn.prepareStatement(query)){
-            stmt.setString(1, status);
+        List<ExpenseWithStatusDTO> expenseList = expenseDAO.getPendingExpenses();
 
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                System.out.println("[Expense ID: " + rs.getInt("expense_id") + 
-                "| Amount: " + rs.getDouble("amount") +
-                "| Description: " + rs.getString("description") +
-                "| Status: " + rs.getString("status") + "]");
+        if (!expenseList.isEmpty()){
+            for (ExpenseWithStatusDTO expenseWithStatusDTO : expenseList) {
+                System.out.println(expenseWithStatusDTO);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-
         }
+        
     }
 
-    public static void reviewExpense(Scanner scanner, Connection conn, User user) throws SQLException {
-        viewPendingExpenses(conn);
+    public static void reviewExpense(Scanner scanner, User user, ExpenseDAO expenseDAO, ApprovalDAO approvalDAO) throws SQLException {
+        viewPendingExpenses(expenseDAO);
         System.out.println("Please enter expense ID:");
         int expenseId = scanner.nextInt();
-        System.out.println("Enter 1 to approve or 2 to deny");
+        System.out.println("1. Approve");
+        System.out.println("2. Deny");
         int user_option = scanner.nextInt();
         String approval = (user_option == 1) ? "approved" : "denied";
-        System.out.println("Enter 1 to leave a comment with the review or 2 to continue");          
+        System.out.println("1. Leave a comment with the review");
+        System.out.println("2. Continue");            
         user_option = scanner.nextInt();
         scanner.nextLine();
         String userComment = null;
         if(user_option == 1){
-            System.out.println("Please enter comment for the review");
+            System.out.println("Enter comment for the review:");
             userComment = scanner.nextLine();
         }
 
@@ -176,22 +166,7 @@ public class ManagerApp {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         String formattedDate = today.format(formatter);
 
-
-        String query = "UPDATE approvals SET status = ?, reviewer = ?, review_date = ?, comment = ? WHERE expense_id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(query)){
-            stmt.setString(1, approval);
-            stmt.setInt(2, user.getId());
-            stmt.setString(3, formattedDate);
-            stmt.setString(4, userComment);
-            stmt.setInt(5, expenseId);
-
-            int rowsAffected = stmt.executeUpdate();
-            if(rowsAffected != 1)
-                throw new SQLException("Expense id does not exist!");
-        } catch (SQLException e) {
-            e.printStackTrace();
-
-        }
+        approvalDAO.updateApproval(expenseId, user.getId(), approval, userComment, formattedDate);
     }
 
     // Add most common category
