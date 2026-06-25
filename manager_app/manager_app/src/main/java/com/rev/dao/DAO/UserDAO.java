@@ -9,7 +9,7 @@ import com.rev.dao.model.User;
 public interface UserDAO {
 
     // CREATE
-    User createUser(String username, String password, String role) throws SQLException;
+    User createUser(String username, String password) throws SQLException;
 
     // READ
     Optional<User> findUserByid (int id) throws Exception;
