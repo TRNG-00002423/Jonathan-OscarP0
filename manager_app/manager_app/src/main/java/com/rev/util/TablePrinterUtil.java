@@ -1,8 +1,12 @@
 package com.rev.util;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.rev.dao.dto.CategoryReportDTO;
+import com.rev.dao.dto.DateReportDTO;
 import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
@@ -21,7 +25,7 @@ public class TablePrinterUtil {
                     String.format("$%.2f", e.getAmount()),
                     e.getCategory(),
                     e.getDescription(),
-                    e.getDate()
+                    formatDateForDisplay(e.getDate())
             });
         }
 
@@ -44,7 +48,7 @@ public class TablePrinterUtil {
                     String.format("$%.2f", e.getAmount()),
                     e.getCategory(),
                     e.getDescription(),
-                    e.getDate(),
+                    formatDateForDisplay(e.getDate()),
                     dto.getStatus(),
                     dto.getComment()
             });
@@ -89,6 +93,48 @@ public class TablePrinterUtil {
 
         print(
                 new String[]{"Employee ID", "Total Amount", "Average Expense", "Expense Count"},
+                rows
+        );
+
+    }
+
+    public static void printCategoryReports(List<CategoryReportDTO> report) {
+
+        List<Object[]> rows = new ArrayList<>();
+
+        for (CategoryReportDTO empR : report) { 
+            rows.add(new Object[]{
+                empR.getEmployeeId(),
+                empR.getCategory(),
+                String.format("$%.2f", empR.getTotal()),
+                String.format("$%.2f", empR.getAverage()),
+                empR.getCount()
+            });
+        }
+
+        print(
+                new String[]{"Employee ID", "Category", "Total Amount", "Average Expense", "Expense Count"},
+                rows
+        );
+
+    }
+
+    public static void printDateReports(List<DateReportDTO> report) {
+
+        List<Object[]> rows = new ArrayList<>();
+
+        for (DateReportDTO empR : report) { 
+            rows.add(new Object[]{
+                empR.getEmployeeId(),
+                String.format("$%.2f", empR.getTotal()),
+                String.format("$%.2f", empR.getAverage()),
+                empR.getCount(),
+                formatDateForDisplay(empR.getDate())
+            });
+        }
+
+        print(
+                new String[]{"Employee ID", "Total Amount", "Average Expense", "Expense Count",  "Date" },
                 rows
         );
 
@@ -141,4 +187,12 @@ public class TablePrinterUtil {
         }
         System.out.println();
     }
+
+    private static String formatDateForDisplay(String date) {
+    LocalDate dateObject = LocalDate.parse(date);
+
+    return dateObject.format(
+            DateTimeFormatter.ofPattern("MMM dd, yyyy")
+    );
+}
 }
