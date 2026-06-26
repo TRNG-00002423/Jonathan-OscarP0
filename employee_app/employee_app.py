@@ -1,8 +1,6 @@
 from output_utils import clear_console
-from Employee import Employee
-from Expense import Expense
+from tabulate import tabulate
 from datetime import datetime
-from Approval import Approval
 import requests
 import questionary
 
@@ -98,11 +96,11 @@ def expense_manager():
         user_input = questionary.select(
             "Main Menu",
             choices=[
-                questionary.Choice("Add expense", "add_expense"),
-                questionary.Choice("View expenses", "view_expenses"),
-                questionary.Choice("Delete expense", "delete_expenses"),
-                questionary.Choice("Edit expense", "edit_expense"),
-                questionary.Choice("View history", "view_history"),
+                questionary.Choice("Add Expense", "add_expense"),
+                questionary.Choice("View Expenses", "view_expenses"),
+                questionary.Choice("Delete Expense", "delete_expenses"),
+                questionary.Choice("Edit Expense", "edit_expense"),
+                questionary.Choice("View History", "view_history"),
                 questionary.Choice("Exit", "exit")
             ]
         ).ask()
@@ -170,14 +168,23 @@ def add_expense():
         print("Failed to add expense.")
 
 def print_expenses(expenses):
-    for expense in expenses:
-        print(
-            f"Expense ID: {expense['id']} | "
-            f"Amount: {expense['amount']} | "
-            f"Description: {expense['description']} | "
-            f"Category: {expense['category']} | "
-            f"Status: {expense['status']}"
-        )
+    table = [
+        [
+            expense["id"],
+            expense["amount"],
+            expense["description"],
+            expense["category"],
+            expense["status"],
+            expense["comment"]
+        ]
+        for expense in expenses
+    ]
+
+    print(tabulate(
+        table,
+        headers=["ID", "Amount", "Description", "Category", "Status", "Comment"],
+        tablefmt="grid"
+    ))
 
 def check_expense_status():
     response = requests.get(f"http://127.0.0.1:5000/expenses/{logged_in_as['id']}")
@@ -196,25 +203,49 @@ def delete_expense():
     print(response.json()["message"])
 
 
+import questionary
+import requests
+
+
 def choose_expense():
-    response = requests.get(f"http://127.0.0.1:5000/expenses/{logged_in_as['id']}/pending")
+    response = requests.get(
+        f"http://127.0.0.1:5000/expenses/{logged_in_as['id']}/pending"
+    )
     expenses = response.json()
-    if len(expenses) == 0:
+
+    if not expenses:
         print("You have no expenses to select.")
         return "BACK"
-           
-    expense_options = [questionary.Choice(
-            title=f"Expense ID: {row['id']} | Amount: ${row['amount']} | Description: {row['description']} | Category: {row['category']} | Status: {row['status']}", 
-            value=row['id']
+
+    # Column header
+    header = (
+        f"{'ID':<5}"
+        f"{'Amount':<12}"
+        f"{'Description':<20}"
+        f"{'Category':<15}"
+        f"{'Status':<12}"
+    )
+
+    expense_options = [
+        questionary.Choice(
+            title=(
+                f"{expense['id']:<5}"
+                f"${expense['amount']:<11.2f}"
+                f"{expense['description']:<20}"
+                f"{expense['category']:<15}"
+                f"{expense['status']:<12}"
+            ),
+            value=expense["id"]
         )
-        for row in expenses
+        for expense in expenses
     ]
+
     expense_options.append(
         questionary.Choice("Go Back", "BACK")
     )
 
     selected_id = questionary.select(
-        "What expense would you like to select?",
+        f"Choose an expense:\n\n  {header}\n{'-' * len(header)}",
         choices=expense_options
     ).ask()
 
