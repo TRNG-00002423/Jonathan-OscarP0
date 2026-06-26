@@ -4,7 +4,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +18,8 @@ import com.rev.dao.DAO.ExpenseDAO;
 import com.rev.dao.DAO.ExpenseDAOImpl;
 import com.rev.dao.DAO.UserDAO;
 import com.rev.dao.DAO.UserDAOImpl;
+import com.rev.dao.dto.CategoryReportDTO;
+import com.rev.dao.dto.DateReportDTO;
 import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
@@ -177,7 +181,6 @@ public class ManagerApp {
         scanner.nextLine();
         String value = "";
         List<Expense> expenses = new ArrayList<>();
-        EmployeeReportDTO report = null;
         
 
         switch (user_input) {
@@ -188,59 +191,49 @@ public class ManagerApp {
                 if(input == 1){
                     System.out.println("Enter employee id:");
                     int employeeID = scanner.nextInt();
-                    report = expenseDAO.getEmployeeReport(employeeID);
+                    EmployeeReportDTO report = expenseDAO.getEmployeeReport(employeeID);
                     TablePrinterUtil.printEmployeeReport(report);
                 } else if (input == 2) {
                     List<EmployeeReportDTO> reports = expenseDAO.getAllEmployeesReport();
                     TablePrinterUtil.printAllEmployeeReports(reports);
                 }
-
                 break;
             case 2:
                 System.out.println("Enter Category:");
                 value = scanner.nextLine();
-                expenses = expenseDAO.getExpensesByCategory(value);
+                List<CategoryReportDTO> reports = expenseDAO.getExpensesByCategory(value);
+                TablePrinterUtil.printCategoryReports(reports);
                 break;
             case 3:
-                System.out.println("Enter Date (DD/MM/YYYY):");
-                String inputDate = scanner.nextLine();
+                System.out.println("Start Date (YYYY-MM-DD):");
+                String input1 = scanner.nextLine();
+                System.out.println("End Date (YYYY-MM-DD):");
+                String input2 = scanner.nextLine();
 
                 try {
-                    DateTimeFormatter inputFormatter =
-                        DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                    DateTimeFormatter formatter =new DateTimeFormatterBuilder()
+                                                    .appendPattern("uuuu-MM-dd")
+                                                    .toFormatter()
+                                                    .withResolverStyle(ResolverStyle.STRICT);
 
-                    LocalDate dateObject =
-                        LocalDate.parse(inputDate, inputFormatter);
+                    LocalDate startDate = LocalDate.parse(input1, formatter);
+                    LocalDate endDate = LocalDate.parse(input2, formatter);
 
-                    DateTimeFormatter outputFormatter =
-                        DateTimeFormatter.ofPattern("MMM dd, yyyy");
-
-                    value = dateObject.format(outputFormatter);
-
-                    expenses = expenseDAO.getExpensesByDate(value);
-
+                    if (endDate.isBefore(startDate)) {
+                        System.out.println("End date cannot be before start date.");
+                        return;
+                    }
+                    
+                    List<DateReportDTO> reports1 = expenseDAO.getExpensesByDate(startDate.toString(), endDate.toString());
+                    TablePrinterUtil.printDateReports(reports1);
                 } catch (DateTimeParseException e) {
-                    System.out.println("Not a valid date. Please try again!");
-                    return;
+                    System.out.print("Invalid date. Please enter a date in YYYY-MM-DD format: ");
                 }
-                break;
 
+                break;
             default:
                 break;
         }
     }
 
-    public static EmployeeReportDTO generateEmployeeReport(List<Expense> expenses, int employeeId) {
-
-        double total = 0;
-        int count = expenses.size();
-
-        for (Expense e : expenses) {
-            total += e.getAmount();
-        }
-
-        double avg = count > 0 ? total / count : 0;
-
-        return new EmployeeReportDTO(employeeId, total, avg, count, expenses);
-    }
 }
