@@ -150,7 +150,7 @@ def add_expense():
     except ValueError as e:
         print("Not a valid date. Please try again!")
         return None        
-    formatted_date = date_object.strftime("%B %d, %Y")
+    formatted_date = date_object.strftime("%b %d, %Y")
 
     response = requests.post(
         "http://127.0.0.1:5000/expense",

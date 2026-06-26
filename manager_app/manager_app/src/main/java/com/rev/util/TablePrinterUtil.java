@@ -3,11 +3,12 @@ package com.rev.util;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
 
 
-public class TablePrinter {
+public class TablePrinterUtil {
 
     public static void printExpenses(List<Expense> expenses) {
 
@@ -50,10 +51,49 @@ public class TablePrinter {
         }
 
         print(
-                new String[]{"ID", "User", "Amount", "Category", "Description", "Date", "Status", "Comment"},
+                new String[]{"ID", "Employee ID", "Amount", "Category", "Description", "Date", "Status", "Comment"},
                 rows
         );
     }
+
+    public static void printEmployeeReport(EmployeeReportDTO report) {
+
+        List<Object[]> rows = new ArrayList<>();
+
+        rows.add(new Object[]{
+            report.getEmployeeId(),
+            String.format("$%.2f", report.getTotal()),
+            String.format("$%.2f", report.getAverage()),
+            report.getCount()
+        });
+
+        print(
+                new String[]{"Employee ID", "Total Amount", "Average Expense", "Expense Count"},
+                rows
+        );
+
+    }
+
+    public static void printAllEmployeeReports(List<EmployeeReportDTO> report) {
+
+        List<Object[]> rows = new ArrayList<>();
+
+        for (EmployeeReportDTO empR : report) { 
+            rows.add(new Object[]{
+                empR.getEmployeeId(),
+                String.format("$%.2f", empR.getTotal()),
+                String.format("$%.2f", empR.getAverage()),
+                empR.getCount()
+            });
+        }
+
+        print(
+                new String[]{"Employee ID", "Total Amount", "Average Expense", "Expense Count"},
+                rows
+        );
+
+    }
+
     public static void print(String[] headers, List<Object[]> rows) {
         int cols = headers.length;
         int[] widths = new int[cols];
