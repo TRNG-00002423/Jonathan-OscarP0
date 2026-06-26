@@ -16,11 +16,12 @@ import com.rev.dao.DAO.ExpenseDAO;
 import com.rev.dao.DAO.ExpenseDAOImpl;
 import com.rev.dao.DAO.UserDAO;
 import com.rev.dao.DAO.UserDAOImpl;
+import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
 import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
-import com.rev.util.TablePrinter;
+import com.rev.util.TablePrinterUtil;
 
 public class ManagerApp { 
     public static void main(String[] args) {
@@ -137,7 +138,7 @@ public class ManagerApp {
 
         List<ExpenseWithStatusDTO> expenseList = expenseDAO.getPendingExpenses();
 
-        TablePrinter.printPendingExpenses(expenseList);
+        TablePrinterUtil.printPendingExpenses(expenseList);
         
     }
 
@@ -176,12 +177,24 @@ public class ManagerApp {
         scanner.nextLine();
         String value = "";
         List<Expense> expenses = new ArrayList<>();
+        EmployeeReportDTO report = null;
+        
 
         switch (user_input) {
             case 1:
-                System.out.println("Enter employee id:");
-                int employeeID = scanner.nextInt();
-                expenses = expenseDAO.getExpensesByEmployee(employeeID);
+                System.out.println("1. By employee id");
+                System.out.println("2. All employees");
+                int input = scanner.nextInt();
+                if(input == 1){
+                    System.out.println("Enter employee id:");
+                    int employeeID = scanner.nextInt();
+                    report = expenseDAO.getEmployeeReport(employeeID);
+                    TablePrinterUtil.printEmployeeReport(report);
+                } else if (input == 2) {
+                    List<EmployeeReportDTO> reports = expenseDAO.getAllEmployeesReport();
+                    TablePrinterUtil.printAllEmployeeReports(reports);
+                }
+
                 break;
             case 2:
                 System.out.println("Enter Category:");
@@ -200,7 +213,7 @@ public class ManagerApp {
                         LocalDate.parse(inputDate, inputFormatter);
 
                     DateTimeFormatter outputFormatter =
-                        DateTimeFormatter.ofPattern("MMMM dd, yyyy");
+                        DateTimeFormatter.ofPattern("MMM dd, yyyy");
 
                     value = dateObject.format(outputFormatter);
 
@@ -214,29 +227,20 @@ public class ManagerApp {
 
             default:
                 break;
-
         }
-        // double totalExpenseAmount = 0.0;
-        // int expenseCount = 0;
-        
-        // for (Expense expense : expenses) {
+    }
 
-        //     totalExpenseAmount += expense.getAmount();
-        //     expenseCount++;
-        //     System.out.println(expense);
+    public static EmployeeReportDTO generateEmployeeReport(List<Expense> expenses, int employeeId) {
 
-        // }
-        
-        // System.out.println("Report Aggregates: ");
-        // System.out.println("Expense Count: " + expenseCount);
-        // System.out.println("Total Amount: " + totalExpenseAmount);
-        // if (expenseCount > 0) {
-        //     System.out.printf("Average Expense Cost: %.2f", (totalExpenseAmount / expenseCount));
-        // } else {
-        //     System.out.println("No expenses found.");
-        // }
+        double total = 0;
+        int count = expenses.size();
 
-        TablePrinter.printExpenses(expenses);
-    
+        for (Expense e : expenses) {
+            total += e.getAmount();
+        }
+
+        double avg = count > 0 ? total / count : 0;
+
+        return new EmployeeReportDTO(employeeId, total, avg, count, expenses);
     }
 }

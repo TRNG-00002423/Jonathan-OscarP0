@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
 
@@ -84,6 +85,52 @@ public class ExpenseDAOImpl implements ExpenseDAO{
 
         return expenses;
     }
+    
+    @Override
+    public EmployeeReportDTO getEmployeeReport(int employeeId) {
+
+        String query =
+            "SELECT user_id, SUM(amount) AS total, AVG(amount) AS average, COUNT(*) AS count " +
+            "FROM expenses WHERE user_id = ? GROUP BY user_id";
+
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+
+            stmt.setInt(1, employeeId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next())
+                return mapRowEmployeeReportDTO(rs);
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new EmployeeReportDTO(employeeId, 0, 0, 0, new ArrayList<>());
+    }
+
+    
+    @Override
+    public List<EmployeeReportDTO> getAllEmployeesReport() {
+        String query =
+            "SELECT user_id, SUM(amount) AS total, AVG(amount) AS average, COUNT(*) AS count " +
+            "FROM expenses GROUP BY user_id";
+
+         List<EmployeeReportDTO> reports = new ArrayList<>();
+
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            ResultSet rs = stmt.executeQuery();
+
+            while(rs.next())
+                reports.add(mapRowEmployeeReportDTO(rs));
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return reports;
+    }
 
     @Override
     public List<Expense> getExpensesByDate(String date) {
@@ -132,6 +179,15 @@ public class ExpenseDAOImpl implements ExpenseDAO{
                     rs.getString("status"),
                     rs.getString("comment")
         );
+    }
+
+    private EmployeeReportDTO mapRowEmployeeReportDTO(ResultSet rs) throws SQLException{
+        return new EmployeeReportDTO(
+                        rs.getInt("user_id"),
+                        rs.getDouble("total"),
+                        rs.getDouble("average"),
+                        rs.getInt("count"),
+                        new ArrayList<>());
     }
 
 }
