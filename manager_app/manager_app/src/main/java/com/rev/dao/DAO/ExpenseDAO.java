@@ -13,11 +13,11 @@ public interface ExpenseDAO {
 
     List<ExpenseWithStatusDTO> getPendingExpenses();
 
-    List<ExpenseWithStatusDTO> getExpensesByEmployee(int userId);
+    List<Expense> getExpensesByEmployee(int userId);
 
-    List<ExpenseWithStatusDTO> getExpensesByCategory(String category);
+    List<Expense> getExpensesByCategory(String category);
     
-    List<ExpenseWithStatusDTO> getExpensesByDate(String date);
+    List<Expense> getExpensesByDate(String date);
 
     void updateExpense(Expense expense);
     
