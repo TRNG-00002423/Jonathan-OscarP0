@@ -20,6 +20,7 @@ import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
 import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
+import com.rev.util.TablePrinter;
 
 public class ManagerApp { 
     public static void main(String[] args) {
@@ -136,11 +137,7 @@ public class ManagerApp {
 
         List<ExpenseWithStatusDTO> expenseList = expenseDAO.getPendingExpenses();
 
-        if (!expenseList.isEmpty()){
-            for (ExpenseWithStatusDTO expenseWithStatusDTO : expenseList) {
-                System.out.println(expenseWithStatusDTO);
-            }
-        }
+        TablePrinter.printPendingExpenses(expenseList);
         
     }
 
@@ -219,26 +216,27 @@ public class ManagerApp {
                 break;
 
         }
-        double totalExpenseAmount = 0.0;
-        int expenseCount = 0;
+        // double totalExpenseAmount = 0.0;
+        // int expenseCount = 0;
         
-        for (Expense expense : expenses) {
+        // for (Expense expense : expenses) {
 
-            totalExpenseAmount += expense.getAmount();
-            expenseCount++;
-            System.out.println(expense);
+        //     totalExpenseAmount += expense.getAmount();
+        //     expenseCount++;
+        //     System.out.println(expense);
 
-        }
+        // }
         
-        System.out.println("Report Aggregates: ");
-        System.out.println("Expense Count: " + expenseCount);
-        System.out.println("Total Amount: " + totalExpenseAmount);
-        if (expenseCount > 0) {
-            System.out.printf("Average Expense Cost: %.2f", (totalExpenseAmount / expenseCount));
-        } else {
-            System.out.println("No expenses found.");
-        }
-        
+        // System.out.println("Report Aggregates: ");
+        // System.out.println("Expense Count: " + expenseCount);
+        // System.out.println("Total Amount: " + totalExpenseAmount);
+        // if (expenseCount > 0) {
+        //     System.out.printf("Average Expense Cost: %.2f", (totalExpenseAmount / expenseCount));
+        // } else {
+        //     System.out.println("No expenses found.");
+        // }
 
+        TablePrinter.printExpenses(expenses);
+    
     }
 }
