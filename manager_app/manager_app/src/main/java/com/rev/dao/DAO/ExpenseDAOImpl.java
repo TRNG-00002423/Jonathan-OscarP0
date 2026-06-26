@@ -46,18 +46,63 @@ public class ExpenseDAOImpl implements ExpenseDAO{
     }
 
     @Override
-    public List<ExpenseWithStatusDTO> getExpensesByEmployee(int userId) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public List<Expense> getExpensesByEmployee(int userId) {
+        String query = "SELECT * FROM expenses WHERE user_id = ?";
+        List<Expense> expenses = new ArrayList<>();
+
+        try (PreparedStatement stmt = conn.prepareStatement(query)){
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next())
+                expenses.add(mapRowExpense(rs));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+
+        }
+
+        return expenses;
     }
 
     @Override
-    public List<ExpenseWithStatusDTO> getExpensesByCategory(String category) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public List<Expense> getExpensesByCategory(String category) {
+        String query = "SELECT * FROM expenses WHERE category = ?";
+        List<Expense> expenses = new ArrayList<>();
+
+        try (PreparedStatement stmt = conn.prepareStatement(query)){
+            stmt.setString(1, category);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next())
+                expenses.add(mapRowExpense(rs));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+
+        }
+
+        return expenses;
     }
 
     @Override
-    public List<ExpenseWithStatusDTO> getExpensesByDate(String date) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public List<Expense> getExpensesByDate(String date) {
+        String query = "SELECT * FROM expenses WHERE date = ?";
+        List<Expense> expenses = new ArrayList<>();
+
+        try (PreparedStatement stmt = conn.prepareStatement(query)){
+            stmt.setString(1, date);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next())
+                expenses.add(mapRowExpense(rs));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+
+        }
+
+        return expenses;
     }
 
     @Override

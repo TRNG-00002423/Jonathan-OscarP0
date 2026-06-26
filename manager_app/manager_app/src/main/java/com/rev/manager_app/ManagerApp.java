@@ -1,12 +1,11 @@
 package com.rev.manager_app;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
@@ -18,6 +17,7 @@ import com.rev.dao.DAO.ExpenseDAOImpl;
 import com.rev.dao.DAO.UserDAO;
 import com.rev.dao.DAO.UserDAOImpl;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
+import com.rev.dao.model.Expense;
 import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
 
@@ -63,7 +63,7 @@ public class ManagerApp {
                     break;
                 case 3:
                     try {
-                        generateReport(scanner, conn);
+                        generateReport(scanner, expenseDAO);
                     } catch (SQLException e) {
                         System.out.println(e.getMessage());
                     }
@@ -78,8 +78,8 @@ public class ManagerApp {
     }
 
     public static User accessAccount(Scanner scanner, UserDAO userDAO) throws SQLException {
-        System.out.println("Please enter 1 if you have an existing account");
-        System.out.println("Please enter 2 if you would like to create an account");
+        System.out.println("1. Log in with existing account");
+        System.out.println("2. Create an account");
         int input = scanner.nextInt();
         User user = null;
         if (input == 1) {
@@ -170,26 +170,26 @@ public class ManagerApp {
     }
 
     // Add most common category
-    public static void generateReport(Scanner scanner, Connection conn) throws SQLException {
+    public static void generateReport(Scanner scanner, ExpenseDAO expenseDAO) throws SQLException {
         System.out.println("Generate report by:");
         System.out.println("1. Employee");
         System.out.println("2. Category");
         System.out.println("3. Date");
         int user_input = scanner.nextInt();
         scanner.nextLine();
-        String query = "";
         String value = "";
+        List<Expense> expenses = new ArrayList<>();
 
         switch (user_input) {
             case 1:
                 System.out.println("Enter employee id:");
-                query = "SELECT * FROM expenses WHERE user_id = ?";
-                value = String.valueOf(scanner.nextInt());
+                int employeeID = scanner.nextInt();
+                expenses = expenseDAO.getExpensesByEmployee(employeeID);
                 break;
             case 2:
                 System.out.println("Enter Category:");
-                query = "SELECT * FROM expenses WHERE category = ?";
                 value = scanner.nextLine();
+                expenses = expenseDAO.getExpensesByCategory(value);
                 break;
             case 3:
                 System.out.println("Enter Date (DD/MM/YYYY):");
@@ -207,7 +207,7 @@ public class ManagerApp {
 
                     value = dateObject.format(outputFormatter);
 
-                    query = "SELECT * FROM expenses WHERE date = ?";
+                    expenses = expenseDAO.getExpensesByDate(value);
 
                 } catch (DateTimeParseException e) {
                     System.out.println("Not a valid date. Please try again!");
@@ -217,35 +217,28 @@ public class ManagerApp {
 
             default:
                 break;
-        }
-
-       try (PreparedStatement stmt = conn.prepareStatement(query)){
-            stmt.setString(1, value);
-            ResultSet rs = stmt.executeQuery();
-            double totalExpenseAmount = 0.0;
-            int expenseCount = 0;
-            while (rs.next()) {
-                System.out.println(
-                    "Expense ID: " + rs.getInt("id") +
-                    " Amount: " + rs.getDouble("amount") +
-                    " Description: " + rs.getString("description")
-                );
-
-                totalExpenseAmount += rs.getDouble("amount");
-                expenseCount++;
-            }
-            System.out.println("Report Aggregates: ");
-            System.out.println("Expense Count: " + expenseCount);
-            System.out.println("Total Amount: " + totalExpenseAmount);
-            if (expenseCount > 0) {
-                System.out.println("Average Expense Cost: " + (totalExpenseAmount / expenseCount));
-            } else {
-                System.out.println("No expenses found.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
 
         }
+        double totalExpenseAmount = 0.0;
+        int expenseCount = 0;
+        
+        for (Expense expense : expenses) {
+
+            totalExpenseAmount += expense.getAmount();
+            expenseCount++;
+            System.out.println(expense);
+
+        }
+        
+        System.out.println("Report Aggregates: ");
+        System.out.println("Expense Count: " + expenseCount);
+        System.out.println("Total Amount: " + totalExpenseAmount);
+        if (expenseCount > 0) {
+            System.out.printf("Average Expense Cost: %.2f", (totalExpenseAmount / expenseCount));
+        } else {
+            System.out.println("No expenses found.");
+        }
+        
+
     }
 }
