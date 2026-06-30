@@ -65,7 +65,7 @@ def add_employee():
     username = questionary.text(
             "Enter username:"
         ).ask()
-    password = questionary.text(
+    password = questionary.password(
             "Enter password:"
         ).ask()
     
@@ -203,10 +203,6 @@ def delete_expense():
     print(response.json()["message"])
 
 
-import questionary
-import requests
-
-
 def choose_expense():
     response = requests.get(
         f"http://127.0.0.1:5000/expenses/{logged_in_as['id']}/pending"
@@ -217,7 +213,6 @@ def choose_expense():
         print("You have no expenses to select.")
         return "BACK"
 
-    # Column header
     header = (
         f"{'ID':<5}"
         f"{'Amount':<12}"
@@ -290,8 +285,6 @@ def edit_expense():
                 json={updated_field: new_value})
         print(response.json()["message"])
         print("Please edit another field or DONE")
-
-    
 
 
 def view_expense_history():
