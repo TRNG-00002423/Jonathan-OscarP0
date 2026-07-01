@@ -27,7 +27,12 @@ import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
 import com.rev.util.TablePrinterUtil;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ManagerApp { 
+    private static final Logger logger =
+        LoggerFactory.getLogger(ManagerApp.class);
     public static void main(String[] args) {
         Connection conn = DatabaseConnectionUtil.getConnection();
         Scanner scanner = new Scanner(System.in);
@@ -40,6 +45,7 @@ public class ManagerApp {
             user = accessAccount(scanner, userDAO);
         } catch (SQLException ex) {
             System.out.println("Database error occurred.");
+            logger.error("Database error occured", ex);
             ex.printStackTrace();
         }
 
@@ -97,12 +103,15 @@ public class ManagerApp {
                 try {
                     user = newUser(scanner, userDAO);
                 } catch (SQLException e) {
+                    logger.error("Error when creating new user", e);
                     e.printStackTrace();
                 }
             }
         }
         if (!user.getRole().equals("Manager")) {
             System.out.println("You do not have access to this application. Please use the Employee app.");
+            logger.warn("Employee login on the manager app");
+
             //TODO add break or exit here
         }
         return user;
@@ -119,9 +128,11 @@ public class ManagerApp {
 
         if (user.isPresent()) {
             System.out.println("Login successful!");
+            logger.info("Login successful for username: {}", username);
             return user.get();
         } else {
             System.out.println("Invalid credentials.");
+            logger.warn("Login unsuccessful for username: {}", username);
             return null;
         }
     }
@@ -135,13 +146,23 @@ public class ManagerApp {
         User user = userDAO.createUser(username, password);
 
         System.out.println("User created successfully!");
+        logger.info("User created successfully: {}", username);
         return user; 
     }
 
     public static void viewPendingExpenses(ExpenseDAO expenseDAO) throws SQLException {
 
         List<ExpenseWithStatusDTO> expenseList = expenseDAO.getPendingExpenses();
+        logger.info("Manager viewing pending expenses");
 
+        if (!expenseList.isEmpty()){
+            for (ExpenseWithStatusDTO expenseWithStatusDTO : expenseList) {
+                System.out.println(expenseWithStatusDTO);
+            }
+        }
+        else {
+            logger.info("No pending expenses found");
+        }
         TablePrinterUtil.printPendingExpenses(expenseList);
         
     }
@@ -169,6 +190,19 @@ public class ManagerApp {
         String formattedDate = today.format(formatter);
 
         approvalDAO.updateApproval(expenseId, user.getId(), approval, userComment, formattedDate);
+        logger.info(
+    "Manager {} {} expense {}",
+            user.getUsername(),
+            approval,
+            expenseId
+        );
+        if (userComment != null) {
+            logger.info(
+                "Manager {} left comment on expense {}",
+                user.getUsername(),
+                expenseId
+            );
+        }
     }
 
     // Add most common category
