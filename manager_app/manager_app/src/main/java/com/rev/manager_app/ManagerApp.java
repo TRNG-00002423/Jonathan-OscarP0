@@ -34,6 +34,7 @@ public class ManagerApp {
     private static final Logger logger =
         LoggerFactory.getLogger(ManagerApp.class);
     public static void main(String[] args) {
+        logger.info("Manager app started");
         Connection conn = DatabaseConnectionUtil.getConnection();
         Scanner scanner = new Scanner(System.in);
         UserDAO userDAO = new UserDAOImpl(conn);
