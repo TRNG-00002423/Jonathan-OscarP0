@@ -1,5 +1,3 @@
-__pycache__/
-revex/
 venv
 __pycache__/
 revex/
@@ -8,3 +6,6 @@ target/
 *.db
 .idea/
 .vscode/
+.log/
+*.log
+em
