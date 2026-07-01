@@ -139,7 +139,7 @@ public class ExpenseDAOImpl implements ExpenseDAO{
     @Override
     public List<DateReportDTO> getExpensesByDate(String startDate, String endDate) {
         String query = "SELECT user_id, date, SUM(amount) AS total, AVG(amount) AS average, COUNT(*) AS count " +
-                       "FROM expenses WHERE date BETWEEN ? AND ? GROUP BY user_id";
+                       "FROM expenses WHERE date BETWEEN ? AND ? GROUP BY user_id, date";
         List<DateReportDTO> reports = new ArrayList<>();
 
         try (PreparedStatement ps = conn.prepareStatement(query)){
