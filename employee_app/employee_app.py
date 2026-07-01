@@ -155,6 +155,7 @@ def add_expense():
     ).ask()
     user_date = questionary.text(
             "Enter a date (YYYY-MM-DD):",
+            default=datetime.today().strftime("%Y-%m-%d"),
             validate=validate_date
     ).ask()
   
@@ -299,6 +300,7 @@ def edit_expense():
             case "date":
                 new_value = questionary.text(
                         "Enter a date (YYYY-MM-DD):",
+                        default=datetime.today().strftime("%Y-%m-%d"),
                         validate=validate_date
                 ).ask()
 

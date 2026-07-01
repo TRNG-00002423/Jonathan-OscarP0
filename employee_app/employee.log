@@ -14,3 +14,14 @@
 2026-07-01 14:53:21,720 - INFO - User oscar updated expense 1: description -> dsjksk
 2026-07-01 14:53:36,891 - INFO - User oscar adding expense: $500.0, category=, description=, date=July 01, 2026
 2026-07-01 14:53:36,923 - INFO - Expense added successfully
+2026-07-01 14:55:37,454 - INFO - Login attempt for username: oscar
+2026-07-01 14:55:38,851 - INFO - User oscar logged in successfully
+2026-07-01 14:55:52,939 - INFO - User oscar adding expense: $903.0, category=, description=, date=February 02, 2026
+2026-07-01 14:55:52,950 - INFO - Expense added successfully
+2026-07-01 14:56:39,086 - INFO - Login attempt for username: oscar
+2026-07-01 14:56:39,819 - INFO - User oscar logged in successfully
+2026-07-01 14:56:47,580 - INFO - User oscar updated expense 4: date -> 2026-07-01
+2026-07-01 14:56:54,198 - INFO - User oscar updated expense 4: date -> 2026-5-2
+2026-07-01 14:56:57,778 - INFO - User oscar updated expense 4: date -> 2026-07-01
+2026-07-01 14:57:04,950 - INFO - User oscar updated expense 4: description -> ds
+2026-07-01 14:57:08,719 - INFO - User oscar updated expense 4: description -> sdds
