@@ -3,6 +3,13 @@ from tabulate import tabulate
 from datetime import datetime
 import requests
 import questionary
+import logging
+
+logging.basicConfig(
+    filename="employee.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 def main():
     global logged_in_as 
@@ -35,6 +42,7 @@ def login_menu():
 
 def login():
     username = questionary.text("Enter username:").ask()
+    logging.info(f"Login attempt for username: {username}")
     tries = 5
     while tries > 0:
         password = questionary.password("Enter password:").ask()
@@ -49,13 +57,16 @@ def login():
         result = response.json()
         if response.status_code == 200 and result.get("success"):
             print("Logged in successfully!")
+            logging.info(f"User {username} logged in successfully")
             return result["user"]
         
         if response.status_code == 404 and result.get("success") == False:
             print(result["message"])
+            logging.warning(f"Login failed: user {username} does not exist")
             return login_menu()
 
         tries -= 1
+        logging.warning(f"Failed login for {username}. Attempts left: {tries}")
         print(f"{result['message']}. Attempts left: {tries}")
 
     print("You have run out of attempts.")
@@ -84,10 +95,12 @@ def add_employee():
 
     if response.status_code == 201 and result.get("success"):
         print("User added successfully!")
+        logging.info(f"New employee account created: {username}")
         return result["user"]
     
     if response.status_code == 400 and result.get("success") == False:
         print(result["message"])
+        logging.warning(f"Account creation failed for {username}: Username taken")
         return login_menu()
 
 
@@ -142,6 +155,7 @@ def add_expense():
     ).ask()
     user_date = questionary.text(
             "Enter a date (YYYY-MM-DD):",
+            default=datetime.today().strftime("%Y-%m-%d"),
             validate=validate_date
     ).ask()
   
@@ -151,6 +165,11 @@ def add_expense():
         print("Not a valid date. Please try again!")
         return None        
     formatted_date = date_object.strftime("%Y-%m-%d")
+
+    logging.info(
+            f"User {logged_in_as['username']} adding expense: "
+            f"${amount}, category={category}, description={description}, date={formatted_date}"
+        )
 
     response = requests.post(
         "http://127.0.0.1:5000/expense",
@@ -164,8 +183,10 @@ def add_expense():
     )
     if response.status_code == 201:
         print("Expense added!")
+        logging.info("Expense added successfully")
     else:
         print("Failed to add expense.")
+        logging.error("Expense failed to add")
 
 def print_expenses(expenses):
     table = [
@@ -199,6 +220,7 @@ def delete_expense():
     expense_id =  choose_expense()
     if expense_id == "BACK":
         return
+    logging.info(f"User {logged_in_as['username']} deleting expense ID {expense_id}")
     response = requests.delete(f"http://127.0.0.1:5000/expense/{expense_id}")
     print(response.json()["message"])
 
@@ -278,9 +300,14 @@ def edit_expense():
             case "date":
                 new_value = questionary.text(
                         "Enter a date (YYYY-MM-DD):",
+                        default=datetime.today().strftime("%Y-%m-%d"),
                         validate=validate_date
                 ).ask()
 
+        logging.info(
+            f"User {logged_in_as['username']} updated expense "
+            f"{expense_id}: {updated_field} -> {new_value}"
+        )
         response = requests.put(f"http://127.0.0.1:5000/expense/{expense_id}",
                 json={updated_field: new_value})
         print(response.json()["message"])
