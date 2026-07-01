@@ -1,6 +1,12 @@
 import sqlite3
 
 from flask import Flask, request, jsonify
+import logging
+logging.basicConfig(
+    filename="server.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 app = Flask(__name__)
 
@@ -14,7 +20,7 @@ def login():
     data = request.json
     username = data["username"]
     password = data["password"]
-
+    logging.info(f"Login request received for {username}")
     conn = get_db()
     cursor = conn.cursor()
 
@@ -28,17 +34,21 @@ def login():
     conn.close()
 
     if not user:
+        logging.warning(f"User {username} not found")
         return jsonify({
             "success": False,
             "message": "User does not exist"
         }), 404
 
     if user["password"] != password:
+        logging.warning(f"Incorrect password for {username}")
         return jsonify({
             "success": False,
             "message": "Incorrect password"
         }), 401
+    
 
+    logging.info(f"User {username} authenticated")
     return jsonify({
         "success": True,
         "user": dict(user)
@@ -71,6 +81,7 @@ def create_user():
         user = cursor.fetchone()
         conn.close()
 
+        logging.info(f"Creating new user: {username}")
         return jsonify({
             "success": True,
             "user": dict(user)
@@ -78,6 +89,7 @@ def create_user():
 
     except sqlite3.IntegrityError:
         conn.close()
+        logging.warning(f"Username {username} already taken")
         return jsonify({
             "success": False,
             "message": "Username is taken"
@@ -109,7 +121,9 @@ def add_expense():
         )
 
         conn.commit()
-
+        logging.info(
+            f"Expense created for user {data['user_id']} amount ${data['amount']}"
+        )
         return jsonify({
             "message": "Expense added successfully",
             "expense_id": expense_id
@@ -117,6 +131,7 @@ def add_expense():
 
     except Exception as e:
         conn.rollback()
+        logging.error(f"Expense creation failed: {str(e)}")
         return jsonify({
             "message": "Failed to add expense",
             "error": str(e)
@@ -133,9 +148,11 @@ def get_expenses(user_id):
             WHERE expenses.user_id = ?
         """, (user_id,))
         expenses = [dict(row) for row in cursor.fetchall()]
+        logging.info(f"User {user_id} viewed all expenses")
         return jsonify(expenses), 200
 
     except Exception as e:
+        logging.error(f"Could not retrieve expenses: {str(e)}")
         return jsonify({
             "message": "Could not retrieve expenses",
             "error": str(e)
@@ -153,9 +170,11 @@ def get_pending_expenses(user_id):
             approvals.expense_id = expenses.id WHERE expenses.user_id = ? AND approvals.status = ? """, 
             (user_id, "pending"))
         expenses = [dict(row) for row in cursor.fetchall()]
+        logging.info(f"User {user_id} viewed pending expenses")
         return jsonify(expenses), 200
 
     except Exception as e:
+        logging.error(f"Could not retrieve expenses: {str(e)}")
         return jsonify({
             "message": "Could not retrieve expenses",
             "error": str(e)
@@ -174,9 +193,11 @@ def get_expense_history(user_id):
                 AND (approvals.status = ? OR approvals.status = ?)""", 
             (user_id, "approved", "denied"))
         expenses = [dict(row) for row in cursor.fetchall()]
+        logging.info(f"User {user_id} retrieved expense history")
         return jsonify(expenses), 200
 
     except Exception as e:
+        logging.error(f"Could not retrieve expenses: {str(e)}")
         return jsonify({
             "message": "Could not retrieve expenses",
             "error": str(e)
@@ -202,15 +223,18 @@ def delete_expense(expense_id):
         )
         if cursor.rowcount == 0:
             conn.rollback()
+            logging.error(f"Delete failed for expense {expense_id}: {str(e)}")
             return jsonify({
                 "message": "Expense not found"
             }), 404
         conn.commit()
+        logging.info(f"Expense {expense_id} deleted")
         return jsonify({
             "message": f"Expense {expense_id} deleted successfully"
         }), 200
     except Exception as e:
         conn.rollback()
+        logging.error(f"Delete failed for expense {expense_id}: {str(e)}")
         return jsonify({
             "message": "Delete failed",
             "error": str(e)
@@ -245,18 +269,22 @@ def edit_expense(expense_id):
 
         if cursor.rowcount == 0:
             conn.rollback()
+            logging.error(f"Update failed for expense {expense_id}: Expense not found")
             return jsonify({
                 "message": "Expense not found"
             }), 404
 
         conn.commit()
-
+        logging.info(
+            f"Expense {expense_id} updated. Fields changed: {list(updates.keys())}"
+        )
         return jsonify({
             "message": f"Expense {expense_id} updated successfully"
         }), 200
 
     except Exception as e:
         conn.rollback()
+        logging.error(f"Update failed for expense {expense_id}: {str(e)}")
         return jsonify({
             "message": "Update failed",
             "error": str(e)
