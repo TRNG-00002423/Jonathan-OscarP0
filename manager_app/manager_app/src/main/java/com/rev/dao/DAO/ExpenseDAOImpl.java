@@ -7,6 +7,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.rev.dao.dto.CategoryReportDTO;
+import com.rev.dao.dto.DateReportDTO;
+import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
 
@@ -30,10 +33,10 @@ public class ExpenseDAOImpl implements ExpenseDAO{
         String status = "pending";
         List<ExpenseWithStatusDTO> expenseList = new ArrayList<>();
 
-        try (PreparedStatement stmt = conn.prepareStatement(query)){
-            stmt.setString(1, status);
+        try (PreparedStatement ps = conn.prepareStatement(query)){
+            ps.setString(1, status);
 
-            ResultSet rs = stmt.executeQuery();
+            ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 expenseList.add(mapRowExpenseWithStatus(mapRowExpense(rs),rs));
             }
@@ -46,18 +49,114 @@ public class ExpenseDAOImpl implements ExpenseDAO{
     }
 
     @Override
-    public List<ExpenseWithStatusDTO> getExpensesByEmployee(int userId) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public List<Expense> getExpensesByEmployee(int userId) {
+        String query = "SELECT * FROM expenses WHERE user_id = ?";
+        List<Expense> expenses = new ArrayList<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(query)){
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next())
+                expenses.add(mapRowExpense(rs));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+
+        }
+
+        return expenses;
+    }
+    
+    @Override
+    public EmployeeReportDTO getEmployeeReport(int employeeId) {
+
+        String query =
+            "SELECT user_id, SUM(amount) AS total, AVG(amount) AS average, COUNT(*) AS count " +
+            "FROM expenses WHERE user_id = ? GROUP BY user_id";
+
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+
+            ps.setInt(1, employeeId);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next())
+                return mapRowEmployeeReportDTO(rs);
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new EmployeeReportDTO(employeeId, 0, 0, 0, new ArrayList<>());
+    }
+
+    
+    @Override
+    public List<EmployeeReportDTO> getAllEmployeesReport() {
+        String query =
+            "SELECT user_id, SUM(amount) AS total, AVG(amount) AS average, COUNT(*) AS count " +
+            "FROM expenses GROUP BY user_id";
+
+        List<EmployeeReportDTO> reports = new ArrayList<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            ResultSet rs = ps.executeQuery();
+
+            while(rs.next())
+                reports.add(mapRowEmployeeReportDTO(rs));
+
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return reports;
     }
 
     @Override
-    public List<ExpenseWithStatusDTO> getExpensesByCategory(String category) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public List<CategoryReportDTO> getExpensesByCategory(String category) {
+        String query =
+            "SELECT user_id, category, SUM(amount) AS total, AVG(amount) AS average, COUNT(*) AS count " +
+            "FROM expenses WHERE category = ? GROUP BY user_id";
+        
+        List<CategoryReportDTO> reports = new ArrayList<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, category);
+            ResultSet rs = ps.executeQuery();
+
+            while(rs.next())
+                reports.add(mapRowCategoryReportDTO(rs));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return reports;
     }
 
     @Override
-    public List<ExpenseWithStatusDTO> getExpensesByDate(String date) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public List<DateReportDTO> getExpensesByDate(String startDate, String endDate) {
+        String query = "SELECT user_id, date, SUM(amount) AS total, AVG(amount) AS average, COUNT(*) AS count " +
+                       "FROM expenses WHERE date BETWEEN ? AND ? GROUP BY user_id, date";
+        List<DateReportDTO> reports = new ArrayList<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(query)){
+            ps.setString(1, startDate);
+            ps.setString(2, endDate);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next())
+                reports.add(mapRowDateReportDTO(rs));
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+
+        }
+
+        return reports;
     }
 
     @Override
@@ -87,6 +186,35 @@ public class ExpenseDAOImpl implements ExpenseDAO{
                     rs.getString("status"),
                     rs.getString("comment")
         );
+    }
+
+    private EmployeeReportDTO mapRowEmployeeReportDTO(ResultSet rs) throws SQLException{
+        return new EmployeeReportDTO(
+                        rs.getInt("user_id"),
+                        rs.getDouble("total"),
+                        rs.getDouble("average"),
+                        rs.getInt("count"),
+                        new ArrayList<>());
+    }
+
+    private CategoryReportDTO mapRowCategoryReportDTO(ResultSet rs) throws SQLException{
+        return new CategoryReportDTO(
+                        rs.getInt("user_id"),
+                        rs.getString("category"),
+                        rs.getDouble("total"),
+                        rs.getDouble("average"),
+                        rs.getInt("count"),
+                        new ArrayList<>());
+    }
+
+    private DateReportDTO mapRowDateReportDTO(ResultSet rs) throws SQLException{
+        return new DateReportDTO(
+                        rs.getInt("user_id"),
+                        rs.getDouble("total"),
+                        rs.getDouble("average"),
+                        rs.getInt("count"),
+                        rs.getString("date"),
+                        new ArrayList<>());
     }
 
 }

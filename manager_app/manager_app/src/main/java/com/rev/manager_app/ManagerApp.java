@@ -1,12 +1,13 @@
 package com.rev.manager_app;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
@@ -17,9 +18,14 @@ import com.rev.dao.DAO.ExpenseDAO;
 import com.rev.dao.DAO.ExpenseDAOImpl;
 import com.rev.dao.DAO.UserDAO;
 import com.rev.dao.DAO.UserDAOImpl;
+import com.rev.dao.dto.CategoryReportDTO;
+import com.rev.dao.dto.DateReportDTO;
+import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
+import com.rev.dao.model.Expense;
 import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
+import com.rev.util.TablePrinterUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,7 +75,7 @@ public class ManagerApp {
                     break;
                 case 3:
                     try {
-                        generateReport(scanner, conn);
+                        generateReport(scanner, expenseDAO);
                     } catch (SQLException e) {
                         System.out.println(e.getMessage());
                     }
@@ -84,8 +90,8 @@ public class ManagerApp {
     }
 
     public static User accessAccount(Scanner scanner, UserDAO userDAO) throws SQLException {
-        System.out.println("Please enter 1 if you have an existing account");
-        System.out.println("Please enter 2 if you would like to create an account");
+        System.out.println("1. Log in with existing account");
+        System.out.println("2. Create an account");
         int input = scanner.nextInt();
         User user = null;
         if (input == 1) {
@@ -157,6 +163,7 @@ public class ManagerApp {
         else {
             logger.info("No pending expenses found");
         }
+        TablePrinterUtil.printPendingExpenses(expenseList);
         
     }
 
@@ -199,84 +206,68 @@ public class ManagerApp {
     }
 
     // Add most common category
-    public static void generateReport(Scanner scanner, Connection conn) throws SQLException {
-        logger.info("Manager generating report");
+    public static void generateReport(Scanner scanner, ExpenseDAO expenseDAO) throws SQLException {
         System.out.println("Generate report by:");
         System.out.println("1. Employee");
         System.out.println("2. Category");
         System.out.println("3. Date");
         int user_input = scanner.nextInt();
         scanner.nextLine();
-        String query = "";
         String value = "";
+        List<Expense> expenses = new ArrayList<>();
+        
 
         switch (user_input) {
             case 1:
-                System.out.println("Enter employee id:");
-                query = "SELECT * FROM expenses WHERE user_id = ?";
-                value = String.valueOf(scanner.nextInt());
+                System.out.println("1. By employee id");
+                System.out.println("2. All employees");
+                int input = scanner.nextInt();
+                if(input == 1){
+                    System.out.println("Enter employee id:");
+                    int employeeID = scanner.nextInt();
+                    EmployeeReportDTO report = expenseDAO.getEmployeeReport(employeeID);
+                    TablePrinterUtil.printEmployeeReport(report);
+                } else if (input == 2) {
+                    List<EmployeeReportDTO> reports = expenseDAO.getAllEmployeesReport();
+                    TablePrinterUtil.printAllEmployeeReports(reports);
+                }
                 break;
             case 2:
                 System.out.println("Enter Category:");
-                query = "SELECT * FROM expenses WHERE category = ?";
                 value = scanner.nextLine();
+                List<CategoryReportDTO> reports = expenseDAO.getExpensesByCategory(value);
+                TablePrinterUtil.printCategoryReports(reports);
                 break;
             case 3:
-                System.out.println("Enter Date (DD/MM/YYYY):");
-                String inputDate = scanner.nextLine();
+                System.out.println("Start Date (YYYY-MM-DD):");
+                String input1 = scanner.nextLine();
+                System.out.println("End Date (YYYY-MM-DD):");
+                String input2 = scanner.nextLine();
 
                 try {
-                    DateTimeFormatter inputFormatter =
-                        DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                    DateTimeFormatter formatter =new DateTimeFormatterBuilder()
+                                                    .appendPattern("uuuu-MM-dd")
+                                                    .toFormatter()
+                                                    .withResolverStyle(ResolverStyle.STRICT);
 
-                    LocalDate dateObject =
-                        LocalDate.parse(inputDate, inputFormatter);
+                    LocalDate startDate = LocalDate.parse(input1, formatter);
+                    LocalDate endDate = LocalDate.parse(input2, formatter);
 
-                    DateTimeFormatter outputFormatter =
-                        DateTimeFormatter.ofPattern("MMMM dd, yyyy");
-
-                    value = dateObject.format(outputFormatter);
-
-                    query = "SELECT * FROM expenses WHERE date = ?";
-
+                    if (endDate.isBefore(startDate)) {
+                        System.out.println("End date cannot be before start date.");
+                        return;
+                    }
+                    
+                    List<DateReportDTO> reports1 = expenseDAO.getExpensesByDate(startDate.toString(), endDate.toString());
+                    TablePrinterUtil.printDateReports(reports1);
                 } catch (DateTimeParseException e) {
-                    System.out.println("Not a valid date. Please try again!");
-                    return;
+                    System.out.print("Invalid date. Please enter a date in YYYY-MM-DD format: ");
                 }
-                break;
 
+                break;
             default:
                 break;
         }
-        logger.info("Report generated by filter: {}", value);
-        try (PreparedStatement stmt = conn.prepareStatement(query)){
-            stmt.setString(1, value);
-            ResultSet rs = stmt.executeQuery();
-            double totalExpenseAmount = 0.0;
-            int expenseCount = 0;
-            while (rs.next()) {
-                System.out.println(
-                    "Expense ID: " + rs.getInt("id") +
-                    " Amount: " + rs.getDouble("amount") +
-                    " Description: " + rs.getString("description")
-                );
-
-                totalExpenseAmount += rs.getDouble("amount");
-                expenseCount++;
-            }
-            System.out.println("Report Aggregates: ");
-            System.out.println("Expense Count: " + expenseCount);
-            System.out.println("Total Amount: " + totalExpenseAmount);
-            if (expenseCount > 0) {
-                System.out.println("Average Expense Cost: " + (totalExpenseAmount / expenseCount));
-                
-            } else {
-                System.out.println("No expenses found.");
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-
-        }
     }
+
 }

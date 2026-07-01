@@ -2,6 +2,9 @@ package com.rev.dao.DAO;
 
 import java.util.List;
 
+import com.rev.dao.dto.CategoryReportDTO;
+import com.rev.dao.dto.DateReportDTO;
+import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
 
@@ -13,11 +16,15 @@ public interface ExpenseDAO {
 
     List<ExpenseWithStatusDTO> getPendingExpenses();
 
-    List<ExpenseWithStatusDTO> getExpensesByEmployee(int userId);
+    List<Expense> getExpensesByEmployee(int userId);
 
-    List<ExpenseWithStatusDTO> getExpensesByCategory(String category);
+    EmployeeReportDTO getEmployeeReport(int employeeId);
+
+    List<EmployeeReportDTO> getAllEmployeesReport();
+
+    List<CategoryReportDTO> getExpensesByCategory(String category);
     
-    List<ExpenseWithStatusDTO> getExpensesByDate(String date);
+    List<DateReportDTO> getExpensesByDate(String startDate, String endDate);
 
     void updateExpense(Expense expense);
     

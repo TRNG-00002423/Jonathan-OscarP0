@@ -164,7 +164,7 @@ def add_expense():
     except ValueError as e:
         print("Not a valid date. Please try again!")
         return None        
-    formatted_date = date_object.strftime("%B %d, %Y")
+    formatted_date = date_object.strftime("%Y-%m-%d")
 
     logging.info(
             f"User {logged_in_as['username']} adding expense: "
