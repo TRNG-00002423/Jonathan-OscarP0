@@ -217,4 +217,19 @@ public class ExpenseDAOImpl implements ExpenseDAO{
                         new ArrayList<>());
     }
 
+    public boolean expenseExists(int expenseId) {
+        String query = "SELECT 1 FROM expenses WHERE id = ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, expenseId);
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    
+
 }

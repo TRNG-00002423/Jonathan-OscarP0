@@ -26,7 +26,7 @@ import com.rev.dao.model.Expense;
 import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
 import com.rev.util.TablePrinterUtil;
-
+import com.rev.util.InputValidation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,11 @@ public class ManagerApp {
         } catch (SQLException ex) {
             System.out.println("Database error occurred.");
             logger.error("Database error occured", ex);
-            ex.printStackTrace();
+        }
+        if (user == null) {
+            System.out.println("Exiting application...");
+            scanner.close();
+            return;
         }
 
         System.out.println("Welcome to the Menu!");
@@ -112,8 +116,7 @@ public class ManagerApp {
         if (!user.getRole().equals("Manager")) {
             System.out.println("You do not have access to this application. Please use the Employee app.");
             logger.warn("Employee login on the manager app");
-
-            //TODO add break or exit here
+            return null;
         }
         return user;
 
@@ -152,38 +155,33 @@ public class ManagerApp {
     }
 
     public static void viewPendingExpenses(ExpenseDAO expenseDAO) throws SQLException {
-
         List<ExpenseWithStatusDTO> expenseList = expenseDAO.getPendingExpenses();
         logger.info("Manager viewing pending expenses");
 
-        if (!expenseList.isEmpty()){
-            for (ExpenseWithStatusDTO expenseWithStatusDTO : expenseList) {
-                System.out.println(expenseWithStatusDTO);
-            }
+        if (expenseList.isEmpty()){
+            logger.info("No pending expenses found");
+            System.out.println("No pending expenses found");
         }
         else {
-            logger.info("No pending expenses found");
-        }
-        TablePrinterUtil.printPendingExpenses(expenseList);
-        
+            TablePrinterUtil.printPendingExpenses(expenseList);
+        } 
     }
+
+    
 
     public static void reviewExpense(Scanner scanner, User user, ExpenseDAO expenseDAO, ApprovalDAO approvalDAO) throws SQLException {
         viewPendingExpenses(expenseDAO);
-        System.out.println("Please enter expense ID:");
-        int expenseId = scanner.nextInt();
+        int expenseId = InputValidation.getValidExpenseId(scanner, expenseDAO, "Please enter expense ID:");  
         System.out.println("1. Approve");
         System.out.println("2. Deny");
-        int user_option = scanner.nextInt();
+        int user_option = InputValidation.getMenuChoice(scanner, 1, 2);
         String approval = (user_option == 1) ? "approved" : "denied";
-        System.out.println("1. Leave a comment with the review");
-        System.out.println("2. Continue");            
-        user_option = scanner.nextInt();
-        scanner.nextLine();
-        String userComment = null;
-        if(user_option == 1){
-            System.out.println("Enter comment for the review:");
-            userComment = scanner.nextLine();
+        scanner.nextLine(); 
+
+        System.out.println("Enter a comment (press Enter to skip):");
+        String userComment = scanner.nextLine().trim();
+        if (userComment.isEmpty()) {
+            userComment = null;
         }
 
         LocalDate today = LocalDate.now();
@@ -206,7 +204,6 @@ public class ManagerApp {
         }
     }
 
-    // Add most common category
     public static void generateReport(Scanner scanner, ExpenseDAO expenseDAO) throws SQLException {
         System.out.println("Generate report by:");
         System.out.println("1. Employee");
