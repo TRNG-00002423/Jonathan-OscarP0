@@ -1,23 +1,16 @@
 package com.rev.util;
 
-import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 public class PasswordUtil {
 
+    private static final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
     public static String hashPassword(String password) {
-        return BCrypt.hashpw(password, BCrypt.gensalt());
+        return encoder.encode(password);
     }
 
     public static boolean verifyPassword(String password, String hash) {
-
-        if (hash == null) return false;
-
-        hash = hash
-                .replace("\n", "")
-                .replace("\r", "")
-                .replace("\"", "")
-                .trim();
-
-        return BCrypt.checkpw(password, hash);
+        return encoder.matches(password, hash);
     }
 }
