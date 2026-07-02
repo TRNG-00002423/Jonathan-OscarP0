@@ -52,21 +52,20 @@ public class UserDAOImpl implements UserDAO{
 
     @Override
     public Optional<User> login(String username, String password) throws SQLException {
-        String query = "SELECT * FROM users WHERE username = ? AND password = ?";
+        String query = "SELECT * FROM users WHERE username = ?";
         try (PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, username);
-            stmt.setString(2, password);
 
             ResultSet result = stmt.executeQuery();
             if (result.next()) {
-                // System.out.println("Logged in as " + user);
                 return Optional.of(mapRow(result));
             } else {
-                System.out.println("Username or password is incorrect.");
+                System.out.println("Username or Password is Incorrect.");
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        
         return Optional.empty();
     }
 

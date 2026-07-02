@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.rev.dao.DAO.ApprovalDAO;
 import com.rev.dao.DAO.ApprovalDAOImpl;
 import com.rev.dao.DAO.ExpenseDAO;
@@ -25,10 +28,8 @@ import com.rev.dao.dto.ExpenseWithStatusDTO;
 import com.rev.dao.model.Expense;
 import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
+import com.rev.util.PasswordUtil;
 import com.rev.util.TablePrinterUtil;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ManagerApp { 
     private static final Logger logger =
@@ -51,102 +52,142 @@ public class ManagerApp {
         }
 
         System.out.println("Welcome to the Menu!");
-        
-        while(true){
-            System.out.println("\n1. View pending expenses");
-            System.out.println("2. Approve/deny an expense");
-            System.out.println("3. Generate a report for an expense");
-            System.out.println("4. Exit the app");
-            int input = scanner.nextInt();
 
-            switch (input){
+        while (true) {
+            System.out.println("\n1. View pending expenses");
+            System.out.println("2. Approve/Deny an expense");
+            System.out.println("3. Generate a report");
+            System.out.println("4. Exit the app");
+
+            if (!scanner.hasNextInt()) {
+                System.out.println("Invalid input. Please enter a number between 1 and 4.");
+                scanner.nextLine();
+                continue;
+            }
+
+            int input = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (input) {
                 case 1:
                     try {
                         viewPendingExpenses(expenseDAO);
                     } catch (SQLException e) {
-                        System.out.println(e.getMessage());
+                        logger.error("Error viewing pending expenses", e);
+                        System.out.println("Unable to Retrieve Pending Expenses.");
                     }
                     break;
+
                 case 2:
                     try {
                         reviewExpense(scanner, user, expenseDAO, approvalDAO);
                     } catch (SQLException e) {
-                        System.out.println(e.getMessage());
+                        logger.error("Error reviewing expense", e);
+                        System.out.println("Unable to Review Expense.");
                     }
                     break;
+
                 case 3:
                     try {
                         generateReport(scanner, expenseDAO);
                     } catch (SQLException e) {
-                        System.out.println(e.getMessage());
+                        logger.error("Error generating report", e);
+                        System.out.println("Unable to Generate Report.");
                     }
                     break;
+
                 case 4:
                     System.out.println("Goodbye!");
-                    scanner.close();
                     return;
+
+                default:
+                    System.out.println("Please Choose a Number Between 1 and 4.");
             }
         }
 
     }
 
     public static User accessAccount(Scanner scanner, UserDAO userDAO) throws SQLException {
-        System.out.println("1. Log in with existing account");
-        System.out.println("2. Create an account");
-        int input = scanner.nextInt();
-        User user = null;
-        if (input == 1) {
-            while (user == null) {
-                user = loginFlow(scanner, userDAO);
-            }
-        } else if (input == 2) {
-            while (user == null) {
-                try {
-                    user = newUser(scanner, userDAO);
-                } catch (SQLException e) {
-                    logger.error("Error when creating new user", e);
-                    e.printStackTrace();
-                }
-            }
-        }
-        if (!user.getRole().equals("Manager")) {
-            System.out.println("You do not have access to this application. Please use the Employee app.");
-            logger.warn("Employee login on the manager app");
+         while (true) {
+            System.out.println("1. Log In");
+            System.out.println("2. Create Account");
 
-            //TODO add break or exit here
-        }
-        return user;
+            if (!scanner.hasNextInt()) {
+                System.out.println("Invalid input!");
+                scanner.nextLine();
+                continue;
+            }
 
+            int input = scanner.nextInt();
+            scanner.nextLine();
+
+            User user = null;
+
+            switch (input) {
+                case 1:
+                    while (user == null) {
+                        user = loginFlow(scanner, userDAO);
+                    }
+                    break;
+
+                case 2:
+                    while (user == null) {
+                        try {
+                            user = newUser(scanner, userDAO);
+                        } catch (SQLException e) {
+                            logger.error("Error creating new user", e);
+                        }
+                    }
+                    break;
+
+                default:
+                    System.out.println("Please Enter 1 or 2.");
+                    continue;
+            }
+
+            if (!user.getRole().equals("Manager")) {
+                System.out.println("You do not have access to this application. Please use the Employee app.");
+                logger.warn("Employee login attempted on manager app.");
+                continue;
+            }
+
+            return user;
+        }
     }
 
     public static User loginFlow(Scanner scanner, UserDAO userDAO) throws SQLException {
-        System.out.println("Please enter a username");
+        System.out.println("Enter Username:");
         String username = scanner.next();
-        System.out.println("Please enter a password");
+        System.out.println("Enter Password");
         String password = scanner.next();
         
         Optional<User> user = userDAO.login(username, password);
 
-        if (user.isPresent()) {
+        if (user.isPresent()
+                && PasswordUtil.verifyPassword(
+                        password,
+                        user.get().getPassword())) {
+                            
             System.out.println("Login successful!");
-            logger.info("Login successful for username: {}", username);
             return user.get();
         } else {
-            System.out.println("Invalid credentials.");
+            System.out.println("Invalid Credentials.");
             logger.warn("Login unsuccessful for username: {}", username);
             return null;
         }
     }
 
     public static User newUser(Scanner scanner, UserDAO userDAO) throws SQLException {
-        System.out.println("Please enter a username");
+        System.out.println("Enter Username"); 
         String username = scanner.next();
-        System.out.println("Please enter a password");
+        System.out.println("Enter Password");
         String password = scanner.next();
 
-        User user = userDAO.createUser(username, password);
+        String hashedPassword = PasswordUtil.hashPassword(password);
+        
+        User user = userDAO.createUser(username, hashedPassword);
 
-        System.out.println("User created successfully!");
+        System.out.println("User Created Successfully!");
         logger.info("User created successfully: {}", username);
         return user; 
     }
@@ -170,7 +211,7 @@ public class ManagerApp {
 
     public static void reviewExpense(Scanner scanner, User user, ExpenseDAO expenseDAO, ApprovalDAO approvalDAO) throws SQLException {
         viewPendingExpenses(expenseDAO);
-        System.out.println("Please enter expense ID:");
+        System.out.println("Enter Expense ID:");
         int expenseId = scanner.nextInt();
         System.out.println("1. Approve");
         System.out.println("2. Deny");
@@ -182,7 +223,7 @@ public class ManagerApp {
         scanner.nextLine();
         String userComment = null;
         if(user_option == 1){
-            System.out.println("Enter comment for the review:");
+            System.out.println("Enter Comment for the Review:");
             userComment = scanner.nextLine();
         }
 
@@ -192,11 +233,12 @@ public class ManagerApp {
 
         approvalDAO.updateApproval(expenseId, user.getId(), approval, userComment, formattedDate);
         logger.info(
-    "Manager {} {} expense {}",
-            user.getUsername(),
-            approval,
-            expenseId
+            "Manager {} {} expense {}",
+                    user.getUsername(),
+                    approval,
+                    expenseId
         );
+        
         if (userComment != null) {
             logger.info(
                 "Manager {} left comment on expense {}",
@@ -206,9 +248,8 @@ public class ManagerApp {
         }
     }
 
-    // Add most common category
     public static void generateReport(Scanner scanner, ExpenseDAO expenseDAO) throws SQLException {
-        System.out.println("Generate report by:");
+        System.out.println("Generate Report By:");
         System.out.println("1. Employee");
         System.out.println("2. Category");
         System.out.println("3. Date");
@@ -220,11 +261,11 @@ public class ManagerApp {
 
         switch (user_input) {
             case 1:
-                System.out.println("1. By employee id");
-                System.out.println("2. All employees");
+                System.out.println("1. By Employee Id");
+                System.out.println("2. All Employees");
                 int input = scanner.nextInt();
                 if(input == 1){
-                    System.out.println("Enter employee id:");
+                    System.out.println("Enter Employee Id:");
                     int employeeID = scanner.nextInt();
                     EmployeeReportDTO report = expenseDAO.getEmployeeReport(employeeID);
                     TablePrinterUtil.printEmployeeReport(report);
@@ -255,14 +296,14 @@ public class ManagerApp {
                     LocalDate endDate = LocalDate.parse(input2, formatter);
 
                     if (endDate.isBefore(startDate)) {
-                        System.out.println("End date cannot be before start date.");
+                        System.out.println("End Date Cannot be Before Start Date.");
                         return;
                     }
                     
                     List<DateReportDTO> reports1 = expenseDAO.getExpensesByDate(startDate.toString(), endDate.toString());
                     TablePrinterUtil.printDateReports(reports1);
                 } catch (DateTimeParseException e) {
-                    System.out.print("Invalid date. Please enter a date in YYYY-MM-DD format: ");
+                    System.out.print("Invalid Date. Please Enter a Date in YYYY-MM-DD Format: ");
                 }
 
                 break;
