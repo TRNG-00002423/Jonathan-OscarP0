@@ -7,7 +7,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
@@ -25,12 +24,11 @@ import com.rev.dao.dto.CategoryReportDTO;
 import com.rev.dao.dto.DateReportDTO;
 import com.rev.dao.dto.EmployeeReportDTO;
 import com.rev.dao.dto.ExpenseWithStatusDTO;
-import com.rev.dao.model.Expense;
 import com.rev.dao.model.User;
 import com.rev.util.DatabaseConnectionUtil;
+import com.rev.util.InputValidation;
 import com.rev.util.PasswordUtil;
 import com.rev.util.TablePrinterUtil;
-import com.rev.util.InputValidation;
 
 public class ManagerApp { 
     private static final Logger logger =
@@ -169,16 +167,6 @@ public class ManagerApp {
         String password = scanner.next();
         
         Optional<User> user = userDAO.login(username);
-
-        String hash = user.get().getPassword();
-
-        System.out.println("RAW HASH: [" + hash + "]");
-        System.out.println("LENGTH: " + hash.length());
-
-        for (byte b : hash.getBytes()) {
-            System.out.print(b + " ");
-        }
-        System.out.println();
 
         if (user.isPresent()
                 && PasswordUtil.verifyPassword(
