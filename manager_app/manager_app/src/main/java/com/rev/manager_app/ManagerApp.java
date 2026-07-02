@@ -31,8 +31,6 @@ import com.rev.util.DatabaseConnectionUtil;
 import com.rev.util.PasswordUtil;
 import com.rev.util.TablePrinterUtil;
 import com.rev.util.InputValidation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class ManagerApp { 
     private static final Logger logger =
@@ -115,7 +113,7 @@ public class ManagerApp {
     }
 
     public static User accessAccount(Scanner scanner, UserDAO userDAO) throws SQLException {
-         while (true) {
+        while (true) {
             System.out.println("1. Log In");
             System.out.println("2. Create Account");
 
@@ -151,15 +149,16 @@ public class ManagerApp {
                     System.out.println("Please Enter 1 or 2.");
                     continue;
             }
-        }
-        if (!user.getRole().equals("Manager")) {
-            System.out.println("You do not have access to this application. Please use the Employee app.");
-            logger.warn("Employee login on the manager app");
-            return null;
-        }
-        return user;
 
-            return user;
+            if (user != null) {
+                if (!user.getRole().equals("Manager")) {
+                    System.out.println("You do not have access to this application. Please use the Employee app.");
+                    logger.warn("Employee login on the manager app");
+                    return null;
+                }
+
+                return user;
+            }
         }
     }
 
@@ -259,8 +258,6 @@ public class ManagerApp {
         int user_input = scanner.nextInt();
         scanner.nextLine();
         String value = "";
-        List<Expense> expenses = new ArrayList<>();
-        
 
         switch (user_input) {
             case 1:
