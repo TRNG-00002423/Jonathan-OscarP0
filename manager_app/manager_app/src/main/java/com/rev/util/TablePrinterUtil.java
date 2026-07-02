@@ -49,13 +49,12 @@ public class TablePrinterUtil {
                     e.getCategory(),
                     e.getDescription(),
                     formatDateForDisplay(e.getDate()),
-                    dto.getStatus(),
-                    dto.getComment()
+                    dto.getStatus()
             });
         }
 
         print(
-                new String[]{"ID", "Employee ID", "Amount", "Category", "Description", "Date", "Status", "Comment"},
+                new String[]{"ID", "Employee ID", "Amount", "Category", "Description", "Date", "Status"},
                 rows
         );
     }
