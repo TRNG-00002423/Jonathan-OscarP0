@@ -138,7 +138,7 @@ def validate_date(date_string):
         datetime.strptime(date_string, "%Y-%m-%d")
         return True
     except ValueError:
-        return "Please enter a valid date in YYYY-MM-DD format."
+        return "Invalid date. Use YYYY-MM-DD."
 
 
 def add_expense():

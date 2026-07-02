@@ -1,7 +1,9 @@
 import sqlite3
 
 from flask import Flask, request, jsonify
+from password_utils import hash_password, verify_password
 import logging
+
 logging.basicConfig(
     filename="server.log",
     level=logging.INFO,
@@ -40,7 +42,7 @@ def login():
             "message": "User does not exist"
         }), 404
 
-    if user["password"] != password:
+    if not verify_password(password, user["password"]):
         logging.warning(f"Incorrect password for {username}")
         return jsonify({
             "success": False,
@@ -67,9 +69,11 @@ def create_user():
     cursor = conn.cursor()
 
     try:
+        hashed_password = hash_password(password)
+
         cursor.execute(
             "INSERT INTO users(username, password, role) VALUES (?, ?, ?)",
-            (username, password, role)
+            (username, hashed_password, role)
         )
         conn.commit()
 

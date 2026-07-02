@@ -51,7 +51,7 @@ public class UserDAOImpl implements UserDAO{
     }
 
     @Override
-    public Optional<User> login(String username, String password) throws SQLException {
+    public Optional<User> login(String username) throws SQLException {
         String query = "SELECT * FROM users WHERE username = ?";
         try (PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, username);
@@ -65,7 +65,7 @@ public class UserDAOImpl implements UserDAO{
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        
+
         return Optional.empty();
     }
 

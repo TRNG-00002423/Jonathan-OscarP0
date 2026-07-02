@@ -12,7 +12,7 @@ public interface UserDAO {
 
     // READ
     //Optional<User> findUserByid (int id) throws Exception;
-    Optional<User> login(String username, String password) throws SQLException;
+    Optional<User> login(String username) throws SQLException;
 
     //UPDATE
     //void updateUser(User user) throws SQLException;
