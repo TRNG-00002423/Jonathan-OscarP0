@@ -168,13 +168,23 @@ public class ManagerApp {
         System.out.println("Enter Password");
         String password = scanner.next();
         
-        Optional<User> user = userDAO.login(username, password);
+        Optional<User> user = userDAO.login(username);
+
+        String hash = user.get().getPassword();
+
+        System.out.println("RAW HASH: [" + hash + "]");
+        System.out.println("LENGTH: " + hash.length());
+
+        for (byte b : hash.getBytes()) {
+            System.out.print(b + " ");
+        }
+        System.out.println();
 
         if (user.isPresent()
                 && PasswordUtil.verifyPassword(
                         password,
                         user.get().getPassword())) {
-                            
+
             System.out.println("Login successful!");
             return user.get();
         } else {

@@ -9,6 +9,15 @@ public class PasswordUtil {
     }
 
     public static boolean verifyPassword(String password, String hash) {
+
+        if (hash == null) return false;
+
+        hash = hash
+                .replace("\n", "")
+                .replace("\r", "")
+                .replace("\"", "")
+                .trim();
+
         return BCrypt.checkpw(password, hash);
     }
 }
