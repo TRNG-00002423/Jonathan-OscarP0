@@ -1,17 +1,12 @@
 package com.rev.manager_app;
 
-import java.nio.channels.Pipe.SourceChannel;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DateTimeParseException;
-import java.time.format.ResolverStyle;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
-import java.util.function.ToDoubleBiFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -204,12 +199,12 @@ public class ManagerApp {
         if (expenseList.isEmpty()){
             logger.info("No pending expenses found");
             ConsoleUtil.printInfo("No pending expenses were found.");
-            return expenseList;
         }
         else {
             TablePrinterUtil.printPendingExpenses(expenseList);
-            return expenseList;
         } 
+        return expenseList;
+
     }
 
 
@@ -218,8 +213,8 @@ public class ManagerApp {
     public static void reviewExpense(Scanner scanner, User user, ExpenseDAO expenseDAO, ApprovalDAO approvalDAO) throws SQLException {
         ConsoleUtil.clearScreen();
         ConsoleUtil.printHeader("Review Expense");
-        List<ExpenseWithStatusDTO> pendingExpensesExist = getPendingExpenses(expenseDAO);
-        if(pendingExpensesExist.isEmpty()){
+        List<ExpenseWithStatusDTO> pendingExpenses = getPendingExpenses(expenseDAO);
+        if(pendingExpenses.isEmpty()){
             ConsoleUtil.pause(scanner);
             return;
         }
@@ -230,6 +225,8 @@ public class ManagerApp {
             return;
         }
         int expenseId = InputValidation.getValidExpenseId(scanner, expenseDAO, "Please enter expense ID: ");  
+        ExpenseWithStatusDTO expense = expenseDAO.getPendingExpenseById(expenseId);
+        TablePrinterUtil.printPendingExpenses(List.of(expense));
         System.out.println("1) Approve");
         System.out.println("2) Deny");
         int user_option = InputValidation.getMenuChoice(scanner, 1, 2);
