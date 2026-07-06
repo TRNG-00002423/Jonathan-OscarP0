@@ -218,7 +218,7 @@ public class ExpenseDAOImpl implements ExpenseDAO{
     }
 
     public boolean expenseExists(int expenseId) {
-        String query = "SELECT 1 FROM expenses WHERE id = ?";
+        String query = "SELECT 1 FROM expenses JOIN approvals ON expenses.id = approvals.expense_id WHERE expenses.id = ? AND status = 'pending'";
 
         try (PreparedStatement ps = conn.prepareStatement(query)) {
             ps.setInt(1, expenseId);

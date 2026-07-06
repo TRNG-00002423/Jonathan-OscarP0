@@ -29,4 +29,6 @@ public interface ExpenseDAO {
     void updateExpense(Expense expense);
     
     void deleteExpense(int id);
+
+    boolean expenseExists(int expenseId);
 }

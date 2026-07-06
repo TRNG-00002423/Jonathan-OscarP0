@@ -60,7 +60,8 @@ public class UserDAOImpl implements UserDAO{
             if (result.next()) {
                 return Optional.of(mapRow(result));
             } else {
-                System.out.println("Username or Password is Incorrect.");
+                //Commenting out for consistency. This only prints if username does not exist
+                //System.out.println("Username or Password is Incorrect.");
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -77,5 +78,19 @@ public class UserDAOImpl implements UserDAO{
                 rs.getString("role")
         );
     }
+
+    public boolean userExists(int userId){
+        String query = "SELECT 1 FROM users WHERE id = ?";
+
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
 
 }
