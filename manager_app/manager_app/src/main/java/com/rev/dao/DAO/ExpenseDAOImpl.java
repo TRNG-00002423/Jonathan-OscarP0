@@ -230,6 +230,33 @@ public class ExpenseDAOImpl implements ExpenseDAO{
         return false;
     }
 
+    @Override
+    public ExpenseWithStatusDTO getPendingExpenseById(int expenseId) {
+        String query = 
+        """
+        SELECT e.*, a.status, a.comment
+        FROM expenses e 
+        JOIN approvals a ON e.id = a.expense_id
+        WHERE e.id = ? AND a.status = ?
+        """;
+
+        try (PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, expenseId);
+            ps.setString(2, "pending");
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return mapRowExpenseWithStatus(mapRowExpense(rs), rs);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
     
 
 }

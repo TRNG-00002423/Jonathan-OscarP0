@@ -31,4 +31,5 @@ public interface ExpenseDAO {
     void deleteExpense(int id);
 
     boolean expenseExists(int expenseId);
+    ExpenseWithStatusDTO getPendingExpenseById(int expensedId);
 }
