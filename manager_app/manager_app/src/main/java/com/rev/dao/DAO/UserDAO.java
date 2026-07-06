@@ -22,4 +22,6 @@ public interface UserDAO {
 
     // READ ALL
     //List<User> findAll() throws SQLException;
+
+    boolean userExists(int userId);
 }
