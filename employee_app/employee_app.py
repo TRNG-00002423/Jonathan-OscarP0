@@ -152,7 +152,7 @@ def add_expense():
         ).ask()
     category = questionary.text(
         "Enter category (optional):"
-    ).ask()
+    ).ask().lower()
     user_date = questionary.text(
             "Enter a date (YYYY-MM-DD):",
             default=datetime.today().strftime("%Y-%m-%d"),

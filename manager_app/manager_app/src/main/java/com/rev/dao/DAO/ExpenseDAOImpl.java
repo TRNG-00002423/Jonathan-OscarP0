@@ -123,7 +123,7 @@ public class ExpenseDAOImpl implements ExpenseDAO{
         List<CategoryReportDTO> reports = new ArrayList<>();
 
         try (PreparedStatement ps = conn.prepareStatement(query)) {
-            ps.setString(1, category);
+            ps.setString(1, category.toLowerCase());
             ResultSet rs = ps.executeQuery();
 
             while(rs.next())
