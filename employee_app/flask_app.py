@@ -227,7 +227,7 @@ def delete_expense(expense_id):
         )
         if cursor.rowcount == 0:
             conn.rollback()
-            logging.error(f"Delete failed for expense {expense_id}: {str(e)}")
+            logging.error(f"Delete failed for expense {expense_id}")
             return jsonify({
                 "message": "Expense not found"
             }), 404
