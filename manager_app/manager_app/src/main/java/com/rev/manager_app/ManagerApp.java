@@ -128,6 +128,7 @@ public class ManagerApp {
                         try {
                             user = newUser(scanner, userDAO);
                         } catch (SQLException e) {
+                            ConsoleUtil.printError("New user could not be created. Please try a different username.");
                             logger.error("Error creating new user", e);
                         }
                     }
